@@ -1,0 +1,6 @@
+*.blend
+*.blend1
+output/
+*.mp4
+__pycache__/
+*.muse-github-snapshot-sync.json
