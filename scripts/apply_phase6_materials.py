@@ -4,6 +4,16 @@ build_chodoin_detailed.py の make_mat / setup_sky と同じパラメータ。
 07_building-parts.md §8 を参照）"""
 import bpy
 from mathutils import Vector
+import sys
+import os as _os
+sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from heian_gpu import use_gpu  # noqa: E402  GPU があれば使う（HEIAN_DEVICE=CPU で無効）
+import os
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO = os.path.dirname(_SCRIPT_DIR)
+# 生成物（.blend・画像）の置き場所。環境変数 HEIAN_WORK で変更できる（既定: <リポジトリ>/output）
+WORK = os.environ.get("HEIAN_WORK", os.path.join(_REPO, "output"))
+os.makedirs(WORK, exist_ok=True)
 
 PARAMS = {
     "MAT_Vermilion":    dict(color=(0.60, 0.10, 0.05), rough=0.55, color2=(0.48, 0.07, 0.035), scale=0.6, bump=0.05),
@@ -99,10 +109,10 @@ scene.view_settings.view_transform = "Filmic"
 scene.view_settings.look = "Medium High Contrast"
 scene.view_settings.exposure = 0.1
 scene.render.engine = "CYCLES"
-scene.cycles.device = "CPU"
+use_gpu(scene)
 scene.cycles.use_denoising = False
 
-bpy.ops.wm.save_as_mainfile(filepath="/home/hatch/workspace/heiankyo-blender/heian_daidairi_detail_v6.blend")
+bpy.ops.wm.save_as_mainfile(filepath=os.path.join(WORK, "heian_daidairi_detail_v6.blend"))
 print("SAVED_V6")
 
 
@@ -129,7 +139,7 @@ def render(path, rx, ry, samples):
     bpy.ops.render.render(write_still=True)
 
 
-OUT = "/home/hatch/workspace/heiankyo-blender/output/view_v6"
+OUT = os.path.join(WORK, "view_v6")
 setup_cam((0, 697, 1800), (0, 697, 0), ortho=1500)
 render(OUT + "_top.png", 1000, 1200, 16)
 print("TOP_DONE")

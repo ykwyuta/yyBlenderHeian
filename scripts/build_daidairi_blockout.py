@@ -17,6 +17,9 @@ import csv
 import sys
 
 import bpy
+import os as _os
+sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from heian_gpu import use_gpu  # noqa: E402  GPU があれば使う（HEIAN_DEVICE=CPU で無効）
 
 HEIGHT_BY_TYPE = {
     "wall": 5.0,
@@ -65,6 +68,7 @@ def box(name, loc, dims, collection, facility_id="", certainty=""):
 
 def main():
     csv_path, blend_out, png_out = parse_args()
+    blend_out, png_out = _os.path.abspath(blend_out), _os.path.abspath(png_out)
 
     # 既存オブジェクトを消してから始める
     bpy.ops.object.select_all(action="SELECT")
@@ -167,7 +171,7 @@ def main():
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.cycles.samples = 16
-    scene.cycles.device = "CPU"
+    use_gpu(scene)
     scene.cycles.use_denoising = False
     if scene.world is None:
         scene.world = bpy.data.worlds.new("World")

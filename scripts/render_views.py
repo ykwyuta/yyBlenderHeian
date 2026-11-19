@@ -11,6 +11,9 @@ import sys
 
 import bpy
 from mathutils import Vector
+import os as _os
+sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from heian_gpu import use_gpu  # noqa: E402  GPU があれば使う（HEIAN_DEVICE=CPU で無効）
 
 
 def setup_cam(scene, loc, target, lens):
@@ -27,11 +30,11 @@ def setup_cam(scene, loc, target, lens):
 
 def main():
     argv = sys.argv
-    prefix = argv[argv.index("--") + 1]
+    prefix = _os.path.abspath(argv[argv.index("--") + 1])  # 相対パスは絶対パスに直す
 
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    use_gpu(scene)
     scene.cycles.samples = 32
     scene.cycles.use_denoising = False
     scene.render.resolution_x, scene.render.resolution_y = 1280, 720

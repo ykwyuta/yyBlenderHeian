@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>平安京Blenderチュートリアル</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><div class="inner">
+  <a class="brand" href="index.html">平安京 Blender 復元</a>
+  <nav class="toc">
+    <a href="index.html" aria-current="page">目次</a>
+    <a href="01_setup.html">1. 環境構築</a>
+    <a href="02_run_scripts.html">2. スクリプト実行</a>
+    <a href="03_gui_still.html">3. GUIで静止画</a>
+    <a href="04_gui_video.html">4. GUIで動画</a>
+    <a href="05_customize.html">5. カスタマイズ</a>
+  </nav>
+</div></header>
+<main>
+<h1>Blender で平安京を描く — チュートリアル</h1>
+<p class="lead">このリポジトリのスクリプトで、平安京（大内裏の精密モデル＋市街の模式モデル）を Blender 上に生成し、静止画と動画にするまでの手順です。</p>
+
+<figure class="hero">
+  <img src="img/still_daigokuden.jpg" alt="南東から見た大極殿。緑釉瓦の屋根と朱の柱、背後に朝堂院の回廊" >
+  <figcaption>このチュートリアルの手順で作った静止画（大極殿、Blender 5.0・Cycles・GPU）。</figcaption>
+</figure>
+
+<div class="cards">
+  <a class="card" href="01_setup.html"><div class="num">1</div><h3>環境構築</h3><p>Blender 5.0 の導入、コマンドラインから呼ぶ設定、GPU の有効化。</p></a>
+  <a class="card" href="02_run_scripts.html"><div class="num">2</div><h3>スクリプト実行</h3><p>配置CSVから大内裏 → 市街 → 動画カメラ → 連番レンダリングまでを順に実行。</p></a>
+  <a class="card" href="03_gui_still.html"><div class="num">3</div><h3>GUIで静止画を作る</h3><p>モデルを開いて視点を探し、カメラを置き、Cycles で高画質に書き出す。</p></a>
+  <a class="card" href="04_gui_video.html"><div class="num">4</div><h3>GUIで動画を作る</h3><p>カメラの動きを確かめ・直し、mp4 に書き出す。連番 PNG をビデオシーケンサーでまとめる。</p></a>
+  <a class="card" href="05_customize.html"><div class="num">5</div><h3>カスタマイズ</h3><p>配置・建物の形・色・光・市街の密度・カメラ経路を変える場所の早見表。</p></a>
+</div>
+
+<h2>最短の流れ</h2>
+<pre><code>Set-Alias blender "C:\Program Files\Blender Foundation\Blender 5.0\blender.exe"
+blender --background --python scripts/build_chodoin_detailed.py -- data/daidairi_layout_v3_1.csv output/heian_daidairi_detail_v7.blend output/view_v7 data/daidairi_conjectural_v1.csv
+blender --background output/heian_daidairi_detail_v7.blend --python scripts/build_city_layer.py
+blender --background output/heian_daidairi_detail_v7.blend --python scripts/setup_axis_animation.py
+powershell -ExecutionPolicy Bypass -File scripts/render_axis_anim.ps1</code></pre>
+<p>できあがるもの（<code>output/</code>）：大内裏モデル v7、市街入りモデル v8、軸線動画用モデル、288枚の連番、確認画像。詳しくは <a href="02_run_scripts.html">2章</a>。</p>
+
+<h2>このモデルについて</h2>
+<ul>
+  <li>座標の原点は朱雀門の中心（X＝東、Y＝北、単位m）。基準年は 818年以降・9世紀前半。</li>
+  <li>大内裏は配置CSVの根拠（史料確度 A〜C）に基づく。根拠のない部分を補った <b>推定レイヤー</b>（確度D）と、町並み全体を確率で作った <b>市街レイヤー</b>（模式）は、別コレクションに分けてある。</li>
+  <li>根拠と経緯はリポジトリ直下の設計メモ（<code>01_proposal.md</code>〜<code>10_city-layer.md</code>）にまとめてある。</li>
+</ul>
+
+<h2>このチュートリアルの画面写真について</h2>
+<p>画面写真は Windows 11 上の Blender 5.0.0（日本語表示、UI倍率0.8）の実際の GUI です。撮影時は、画面切り替え・設定変更・クリック・レンダリングの実行を Blender 内部の操作（オペレーターと疑似マウス入力）で順に行い、Blender 内蔵のスクリーンショット機能で撮りました。手で同じ操作をすれば同じ画面になります。</p>
+
+</main>
+<footer><div class="inner">平安京 Blender 復元プロジェクト チュートリアル ／ 確認環境：Windows 11・Blender 5.0.0・GeForce RTX 3060</div></footer>
+</body>
+</html>

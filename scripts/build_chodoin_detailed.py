@@ -49,6 +49,9 @@ import sys
 
 import bpy
 from mathutils import Vector
+import os as _os
+sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from heian_gpu import use_gpu  # noqa: E402  GPU があれば使う（HEIAN_DEVICE=CPU で無効）
 
 # ---------------------------------------------------------------- materials
 
@@ -647,6 +650,8 @@ def main():
     argv = sys.argv
     args = argv[argv.index("--") + 1:]
     csv_path, blend_out, prefix = args[0], args[1], args[2]
+    # Blender は相対パスをカレントディレクトリ基準で解決しないため、絶対パスにしておく
+    blend_out, prefix = _os.path.abspath(blend_out), _os.path.abspath(prefix)
     conj_path = args[3] if len(args) > 3 else None
 
     bpy.ops.object.select_all(action="SELECT")
@@ -754,7 +759,7 @@ def main():
 
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    use_gpu(scene)
     scene.cycles.use_denoising = False
     scene.view_settings.view_transform = "Filmic"
     scene.view_settings.look = "Medium High Contrast"

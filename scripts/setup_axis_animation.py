@@ -3,8 +3,17 @@
 門の開口（基壇上面 z=1.0 から高さ2.9）を通るため、門の通過時は
 カメラ高さを 2.2 に保ち、朝堂院に入ってから緩やかに上昇する。"""
 import bpy
-import os
 import time
+import sys
+import os as _os
+sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from heian_gpu import use_gpu  # noqa: E402  GPU があれば使う（HEIAN_DEVICE=CPU で無効）
+import os
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO = os.path.dirname(_SCRIPT_DIR)
+# 生成物（.blend・画像）の置き場所。環境変数 HEIAN_WORK で変更できる（既定: <リポジトリ>/output）
+WORK = os.environ.get("HEIAN_WORK", os.path.join(_REPO, "output"))
+os.makedirs(WORK, exist_ok=True)
 
 FPS = 24
 FRAME_END = 288  # 12秒
@@ -55,7 +64,7 @@ scene.render.fps = FPS
 scene.camera = cam
 
 scene.render.engine = "CYCLES"
-scene.cycles.device = "CPU"
+use_gpu(scene)
 # この Debian 版 Blender には OpenImageDenoise が無いため、デノイズは
 # 使わず、適応サンプリングで空・地面などの平坦部を高速化する
 scene.cycles.samples = 32
@@ -66,18 +75,18 @@ scene.cycles.use_denoising = False
 scene.render.resolution_x = 960
 scene.render.resolution_y = 540
 
-OUTDIR = "/home/hatch/workspace/heiankyo-blender/output/axis_anim"
+OUTDIR = os.path.join(WORK, "axis_anim")
 os.makedirs(OUTDIR, exist_ok=True)
 scene.render.filepath = OUTDIR + "/frame_"
 scene.render.image_settings.file_format = "PNG"
 
 bpy.ops.wm.save_as_mainfile(
-    filepath="/home/hatch/workspace/heiankyo-blender/heian_daidairi_axis_anim.blend")
+    filepath=os.path.join(WORK, "heian_daidairi_axis_anim.blend"))
 print("ANIM_SAVED")
 
 for f in (1, 96, 216, 288):
     scene.frame_set(f)
-    scene.render.filepath = "/home/hatch/workspace/heiankyo-blender/output/anim_test_%03d" % f
+    scene.render.filepath = os.path.join(WORK, "anim_test_%03d" % f)
     t0 = time.time()
     bpy.ops.render.render(write_still=True)
     print("TEST_FRAME", f, "sec=%.1f" % (time.time() - t0))
