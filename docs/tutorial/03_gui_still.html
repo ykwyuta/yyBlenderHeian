@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GUIで静止画 — 平安京Blenderチュートリアル</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><div class="inner">
+  <a class="brand" href="index.html">平安京 Blender 復元</a>
+  <nav class="toc">
+    <a href="index.html">目次</a>
+    <a href="01_setup.html">1. 環境構築</a>
+    <a href="02_run_scripts.html">2. スクリプト実行</a>
+    <a href="03_gui_still.html" aria-current="page">3. GUIで静止画</a>
+    <a href="04_gui_video.html">4. GUIで動画</a>
+    <a href="05_customize.html">5. カスタマイズ</a>
+  </nav>
+</div></header>
+<main>
+<h1>3. Blender の GUI で静止画を作る</h1>
+<p class="lead">2章で作ったモデルを Blender の画面で開き、見たい場所を探してカメラを置き、高画質の静止画として書き出します。画面写真はすべて Blender 5.0.0（日本語表示）の実際の画面です。</p>
+
+<div class="note">
+<p><b>日本語表示にするには</b>：<b>Edit → Preferences → Interface → Translation</b> で Language を「日本語 (Japanese)」にします。本ページでは日本語表示の項目名に英語名を併記します。</p>
+</div>
+
+<h2>1. モデルを開く</h2>
+<p><code>output/heian_daidairi_detail_v7.blend</code> をダブルクリックするか、Blender を起動して <b>ファイル（File）→ 開く（Open）</b>（<kbd>Ctrl</kbd>+<kbd>O</kbd>）で選びます。市街まで見たい場合は v8 を開きます（重いので最初は v7 がおすすめです）。</p>
+<figure>
+  <img src="img/g01_open.jpg" alt="v7 を開いた直後の Blender の画面。中央に大内裏の全体、右上にアウトライナー、右下にプロパティ" loading="lazy">
+  <figcaption>v7 を開いたところ。中央が <b>3Dビューポート</b>、右上が <b>アウトライナー</b>（オブジェクトとコレクションの一覧）、右下が <b>プロパティ</b>（各種設定）、下が <b>タイムライン</b>。</figcaption>
+</figure>
+
+<h2>2. 視点を動かして見たい場所を探す</h2>
+<table>
+  <tr><th>操作</th><th>マウス</th><th>キーボード</th></tr>
+  <tr><td>回転</td><td>中ボタンを押してドラッグ</td><td>テンキー <kbd>4</kbd><kbd>6</kbd><kbd>8</kbd><kbd>2</kbd></td></tr>
+  <tr><td>平行移動</td><td><kbd>Shift</kbd>＋中ボタンドラッグ</td><td><kbd>Ctrl</kbd>＋テンキー</td></tr>
+  <tr><td>拡大・縮小</td><td>ホイール</td><td>テンキー <kbd>+</kbd> <kbd>-</kbd></td></tr>
+  <tr><td>真上・正面・右から</td><td>右上の軸ギズモの Z / Y / X をクリック</td><td>テンキー <kbd>7</kbd> / <kbd>1</kbd> / <kbd>3</kbd></td></tr>
+  <tr><td>選んだ物に寄る</td><td>アウトライナーで選んでから</td><td>テンキー <kbd>.</kbd>（ビュー → 選択をフレームイン）</td></tr>
+  <tr><td>歩き回る</td><td>—</td><td><kbd>Shift</kbd>+<kbd>`</kbd>（ウォーク／フライ。<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> で移動）</td></tr>
+</table>
+<p>テンキーが無いノートPCでは、<b>編集 → プリファレンス → 入力 → テンキーを模倣</b> をオンにすると数字キーで代用できます。右上の手のひら・虫めがねアイコンをドラッグしても移動・拡大できます。</p>
+<div class="note">
+<p>大内裏は東西約1.2km・南北約1.4kmあります。大極殿の位置は X=0, Y≒565（m）です。アウトライナーで <code>CHD_Daigokuden_Roof</code> などを選んでテンキー <kbd>.</kbd> を押すと、一気に寄れます。</p>
+</div>
+<figure>
+  <img src="img/g02_zoom.jpg" alt="大極殿に寄った視点（ソリッド表示）" loading="lazy">
+  <figcaption>大極殿と朝堂院に寄ったところ（ソリッド表示）。</figcaption>
+</figure>
+
+<h2>3. 表示モードを切り替えて仕上がりを確かめる</h2>
+<p>3Dビューポート右上の4つの丸いボタンで表示を切り替えます。左から <b>ワイヤーフレーム</b>、<b>ソリッド</b>、<b>マテリアルプレビュー</b>、<b>レンダー</b>（<kbd>Z</kbd> キーで円形メニューからも選べます）。</p>
+<figure>
+  <img src="img/g03_material.jpg" alt="マテリアルプレビュー表示。朱の柱、白壁、緑釉瓦の色が見える" loading="lazy">
+  <figcaption><b>マテリアルプレビュー</b>：色と質感が付く。動作が軽いので、構図を探すときはこれがおすすめ。初回はシェーダーのコンパイルに数十秒かかります。</figcaption>
+</figure>
+<figure>
+  <img src="img/g04_rendered.jpg" alt="レンダー表示。太陽光と空の光で陰影が付いた状態" loading="lazy">
+  <figcaption><b>レンダー</b>：最終出力と同じ Cycles で描く。太陽光の影や空の映り込みまで確認できる。GPU を使う設定（下の手順5）にしておくと数秒で落ち着く。</figcaption>
+</figure>
+
+<h2>4. コレクションで表示する範囲を切り替える</h2>
+<p>生成物は種類ごとにコレクションへ分けてあります。アウトライナーの目のアイコンで表示・非表示、カメラのアイコンでレンダリングに含めるかを切り替えます。</p>
+<table>
+  <tr><th>コレクション</th><th>中身</th></tr>
+  <tr><td><code>COL_01_OuterWall_Gates</code></td><td>外郭の門</td></tr>
+  <tr><td><code>COL_02_Chodoin</code></td><td>朝堂院・大極殿・朱雀門・応天門など軸線上の建物</td></tr>
+  <tr><td><code>COL_03_Dairi</code></td><td>内裏（紫宸殿・清涼殿・後宮）</td></tr>
+  <tr><td><code>COL_04_Burakuin</code></td><td>豊楽院</td></tr>
+  <tr><td><code>COL_05_Offices</code></td><td>官衙ゾーン・中和院・真言院・宴の松原（棟配置は模式）</td></tr>
+  <tr><td><code>COL_80_Conjectural</code></td><td>推定レイヤー（確度D）。根拠データと分けて見たいときはここを非表示に</td></tr>
+  <tr><td><code>COL_70_City</code></td><td>市街レイヤー（v8のみ・模式生成）</td></tr>
+  <tr><td><code>COL_90_Blockout</code></td><td>外郭の築地、地面、朱雀大路などの文脈</td></tr>
+</table>
+<div class="cards" style="grid-template-columns: minmax(0, 340px) 1fr;">
+  <figure style="margin:0"><img src="img/c03_collections_outliner.png" alt="アウトライナーにコレクションだけを一覧表示し、COL_70_City を非表示にしたところ" loading="lazy"></figure>
+  <div>
+    <p>v8 で <code>COL_70_City</code> の目のアイコンを消し、大内裏だけを表示したところ（市街の行が灰色になる）。</p>
+    <p>アウトライナー右上の漏斗（<b>フィルター</b>）を開いて「オブジェクト」のチェックを外すと、この写真のようにコレクションだけの一覧になって見やすくなります。</p>
+  </div>
+</div>
+<figure>
+  <img src="img/c01_city_overview.jpg" alt="v8 で市街全体を表示したマテリアルプレビュー" loading="lazy">
+  <figcaption>v8 で市街を表示したところ（マテリアルプレビュー）。約2.6万オブジェクトあるので、視点操作が重いときは市街を隠して作業し、レンダリングの直前に戻すと快適です。</figcaption>
+</figure>
+<figure>
+  <img src="img/c02_rajomon.jpg" alt="朱雀大路の南端から羅城門を見た視点" loading="lazy">
+  <figcaption>v8 で京の南端（Y=−3850）の羅城門に寄ったところ。奥へ朱雀大路がまっすぐ北の大内裏まで延びる。</figcaption>
+</figure>
+<div class="note">
+<p>市街のように遠くまで広がる場面で、離れて見ると面がちらつく（四角が菱形に欠けるなど）ときは、サイドバー（<kbd>N</kbd>）の <b>ビュー → クリップ開始</b> を 1〜2m に上げると直ります。</p>
+</div>
+
+<h2>5. カメラを置く</h2>
+<p>静止画は「シーンのカメラ」から見た絵になります。v7 にはカメラが入っていないので、ひとつ追加します。</p>
+<ol class="steps">
+  <li>3Dビューポートで、撮りたい構図になるまで視点を動かす。</li>
+  <li><b>追加（Add）→ カメラ（Camera）</b> でカメラを追加する。</li>
+  <li><b>ビュー（View）→ 視点の揃え（Align View）→ アクティブカメラをビューに（Align Active Camera to View）</b>（<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+テンキー<kbd>0</kbd>）で、今の視点にカメラを合わせる。</li>
+  <li>テンキー <kbd>0</kbd> でカメラ視点に入る。外側の暗い部分は写らない範囲です。</li>
+  <li>微調整は、サイドバー（<kbd>N</kbd>）の <b>ビュー（View）</b> タブで <b>カメラをビューにロック（Lock Camera to View）</b> をオンにすると、普段の視点操作でカメラごと動かせます。決まったらオフに戻します。</li>
+</ol>
+<figure>
+  <img src="img/g06_camera.jpg" alt="カメラ視点で大極殿を南東から見上げた構図" loading="lazy">
+  <figcaption>カメラ視点（テンキー0）。右のプロパティにカメラ <code>StillCam</code> の位置（X=62m, Y=478m, Z=30m）が表示されている。数値を直接打ち込んで位置を決めることもできる。</figcaption>
+</figure>
+<p>カメラを選んだ状態でプロパティの緑のカメラアイコン（オブジェクトデータ）を開くと、<b>焦点距離</b> を変えられます。35〜40mm で人の目に近い広さ、24mm 以下で広角になります。建物を見上げる絵では、カメラを地上 1.5m 程度まで下げると迫力が出ます。</p>
+
+<h2>6. レンダー設定</h2>
+<p>プロパティの上から2番目、背面カメラの形のアイコンが <b>レンダープロパティ</b> です。</p>
+<div class="cards" style="grid-template-columns: minmax(0, 300px) 1fr;">
+  <figure style="margin:0"><img src="img/g08_render_props.png" alt="レンダープロパティ。レンダーエンジン Cycles、デバイス GPU演算、サンプル数とデノイズ" loading="lazy"></figure>
+  <div>
+    <table>
+      <tr><th>項目</th><th>設定</th></tr>
+      <tr><td>レンダーエンジン</td><td><b>Cycles</b>（このプロジェクトの質感・光は Cycles 前提）</td></tr>
+      <tr><td>デバイス</td><td><b>GPU演算</b>。選べないときは <a href="01_setup.html">1章の手順4</a> でプリファレンスの GPU を有効にする</td></tr>
+      <tr><td>サンプリング → レンダー → 最大サンプル数</td><td>確認用 32、仕上げ 64〜256。多いほどザラつきが減る</td></tr>
+      <tr><td>デノイズ</td><td><b>オン</b>。少ないサンプルでも滑らかになる</td></tr>
+      <tr><td>カラーマネジメント（下の方）</td><td>ビュー変換 <b>Filmic</b>、ルック <b>Medium High Contrast</b>（スクリプトの設定のまま）</td></tr>
+    </table>
+    <p>RTX 3060 で 1920×1080・64サンプル・デノイズありの実測は約14秒でした。</p>
+  </div>
+</div>
+
+<h2>7. 出力設定（解像度）</h2>
+<p>その下のプリンターの形のアイコンが <b>出力プロパティ</b> です。</p>
+<div class="cards" style="grid-template-columns: minmax(0, 300px) 1fr;">
+  <figure style="margin:0"><img src="img/g09_output_props.png" alt="出力プロパティ。解像度 1920x1080、100%" loading="lazy"></figure>
+  <div>
+    <ul>
+      <li><b>解像度 X / Y</b>：1920 × 1080（フルHD）。印刷用なら 3840 × 2160 など。</li>
+      <li><b>%</b>：下書きのときは 50% にすると4倍速く描ける。</li>
+      <li>静止画の場合、下の「出力」欄のファイル形式は、手順8の保存時に選べるのでここでは触らなくて構いません。</li>
+    </ul>
+  </div>
+</div>
+
+<h2>8. レンダリングして保存する</h2>
+<ol class="steps">
+  <li><b>レンダー（Render）→ 画像をレンダリング（Render Image）</b>（<kbd>F12</kbd>）。別ウィンドウが開き、少しずつ絵ができていきます。</li>
+  <li>出来上がったら、そのウィンドウの <b>画像（Image）→ 名前を付けて保存（Save As）</b>（<kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd>）で PNG か JPEG として保存します。</li>
+</ol>
+<figure>
+  <img src="img/g10_render_window.jpg" alt="レンダー結果のウィンドウ。大極殿の静止画が表示されている" loading="lazy">
+  <figcaption>レンダー結果のウィンドウ。左上に <code>Frame:1 | Time:00:13.80</code> と描画時間が出る。メニューの「画像」から保存する。</figcaption>
+</figure>
+<figure>
+  <img src="img/still_daigokuden.jpg" alt="完成した静止画：南東から見た大極殿" loading="lazy">
+  <figcaption>保存した静止画（1920×1080、Cycles 64サンプル＋デノイズ）。</figcaption>
+</figure>
+
+<div class="warn">
+<p><b>.blend を上書きするときの注意</b>：カメラを足した .blend を保存（<kbd>Ctrl</kbd>+<kbd>S</kbd>）してもかまいませんが、スクリプトを再実行すると同じ名前のファイルは作り直されます。手作業の結果を残したいときは <b>名前を付けて保存</b> で別名（例：<code>heian_v7_mycamera.blend</code>）にしてください。</p>
+</div>
+
+<h2>よく使うショートカット</h2>
+<table>
+  <tr><th>キー</th><th>動作</th></tr>
+  <tr><td><kbd>F12</kbd></td><td>静止画レンダリング</td></tr>
+  <tr><td><kbd>F11</kbd></td><td>最後のレンダー結果を再表示</td></tr>
+  <tr><td>テンキー <kbd>0</kbd></td><td>カメラ視点</td></tr>
+  <tr><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+テンキー<kbd>0</kbd></td><td>カメラを今の視点に合わせる</td></tr>
+  <tr><td><kbd>Z</kbd></td><td>表示モードの円形メニュー</td></tr>
+  <tr><td><kbd>N</kbd></td><td>サイドバーの表示／非表示</td></tr>
+  <tr><td><kbd>H</kbd> / <kbd>Alt</kbd>+<kbd>H</kbd></td><td>選んだ物を隠す／すべて再表示</td></tr>
+</table>
+
+<div class="pager">
+  <a href="02_run_scripts.html">← 2. スクリプト実行</a>
+  <a href="04_gui_video.html">4. GUIで動画を作る →</a>
+</div>
+</main>
+<footer><div class="inner">平安京 Blender 復元プロジェクト チュートリアル</div></footer>
+</body>
+</html>

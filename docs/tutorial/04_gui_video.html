@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GUIで動画 — 平安京Blenderチュートリアル</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><div class="inner">
+  <a class="brand" href="index.html">平安京 Blender 復元</a>
+  <nav class="toc">
+    <a href="index.html">目次</a>
+    <a href="01_setup.html">1. 環境構築</a>
+    <a href="02_run_scripts.html">2. スクリプト実行</a>
+    <a href="03_gui_still.html">3. GUIで静止画</a>
+    <a href="04_gui_video.html" aria-current="page">4. GUIで動画</a>
+    <a href="05_customize.html">5. カスタマイズ</a>
+  </nav>
+</div></header>
+<main>
+<h1>4. Blender の GUI で動画を作る</h1>
+<p class="lead">2章のステップ3で作った軸線動画用のファイルを開き、カメラの動きを確かめ・直し、mp4 として書き出します。後半では、描き終わった連番 PNG を Blender のビデオシーケンサーで mp4 にまとめる方法も扱います。</p>
+
+<h2>1. 動画用ファイルを開いてアニメーション画面にする</h2>
+<ol class="steps">
+  <li><code>output/heian_daidairi_axis_anim.blend</code> を開く。</li>
+  <li>画面上部のタブから <b>Animation</b> ワークスペースに切り替える。</li>
+  <li>アウトライナーで <code>AxisCam</code>（カメラ）をクリックして選ぶと、下の <b>ドープシート</b> にキーフレーム（黄色の菱形）が並ぶ。</li>
+</ol>
+<figure>
+  <img src="img/v01_animation_ws.jpg" alt="Animation ワークスペース。上にカメラ視点、下のドープシートに AxisCam のキーフレームが並ぶ" loading="lazy">
+  <figcaption>Animation ワークスペース（120フレーム目、応天門の手前）。下のドープシートの黄色い菱形がカメラ位置のキーフレーム。青い縦線が今のフレーム。</figcaption>
+</figure>
+<table>
+  <tr><th>操作</th><th>方法</th></tr>
+  <tr><td>再生／停止</td><td><kbd>Space</kbd></td></tr>
+  <tr><td>フレームを移動</td><td>ドープシートやタイムラインの上をドラッグ。<kbd>←</kbd><kbd>→</kbd> で1フレームずつ、<kbd>↑</kbd><kbd>↓</kbd> でキーフレーム間を移動</td></tr>
+  <tr><td>最初／最後へ</td><td><kbd>Shift</kbd>+<kbd>←</kbd> / <kbd>Shift</kbd>+<kbd>→</kbd></td></tr>
+  <tr><td>カメラ視点</td><td>3Dビューにマウスを置いてテンキー <kbd>0</kbd></td></tr>
+</table>
+<div class="note">
+<p>再生がカクつくのは正常です。ソリッド表示にすると滑らかに確認できます。最終的な見た目は手順4のレンダリングで確かめます。</p>
+</div>
+
+<h2>2. カメラの動きを直す</h2>
+<p>このファイルのカメラは 2 つのオブジェクトで動いています。</p>
+<ul>
+  <li><code>AxisCam</code>：カメラ本体。位置にキーフレームが打ってある。</li>
+  <li><code>AxisTarget</code>：カメラが見る点（空のオブジェクト）。カメラには「トラック」コンストレイントが付いていて、常にこの点を向く。これにも位置のキーフレームがある。</li>
+</ul>
+<ol class="steps">
+  <li>直したいフレームに移動する（例：96フレーム目＝朱雀門の通過）。</li>
+  <li><code>AxisCam</code> を選び、<kbd>G</kbd> で動かす（<kbd>G</kbd> → <kbd>Z</kbd> で上下だけ、<kbd>G</kbd> → <kbd>Y</kbd> で南北だけ）。または右のプロパティの <b>位置</b> に数値を入れる。</li>
+  <li><kbd>I</kbd> キー（または位置の欄で右クリック → キーフレームを挿入）でキーフレームを打つ。既にキーがあるフレームなら上書きされる。</li>
+  <li>見る方向を変えたいときは <code>AxisTarget</code> を同じように動かしてキーを打つ。</li>
+  <li>ドープシートで菱形を選んで <kbd>G</kbd> で左右に動かすと、そのキーのタイミングが変わる。</li>
+</ol>
+<div class="warn">
+<p>門の通り抜け開口は地面から約1.0〜3.9mです。門を通るフレームでカメラの高さ（位置 Z）を上げすぎると屋根を突き抜けます。スクリプトでは 2.2〜2.6m にしています。</p>
+</div>
+<p>経路をまるごと作り直したい場合は、GUIよりスクリプトの <code>KEYS</code> を直す方が確実です（<a href="05_customize.html#camera">5章</a>）。</p>
+
+<h2>3. 動画の出力設定</h2>
+<p>プロパティの <b>出力プロパティ</b>（プリンターのアイコン）を開きます。</p>
+<div class="cards" style="grid-template-columns: minmax(0, 300px) 1fr;">
+  <figure style="margin:0"><img src="img/v02_output_video.png" alt="出力プロパティ。メディアタイプ 動画、コンテナ MPEG-4、動画コーデック H.264、出力の品質 高品質" loading="lazy"></figure>
+  <div>
+    <table>
+      <tr><th>欄</th><th>設定</th></tr>
+      <tr><td>フレーム範囲</td><td>開始 1、終了 288（12秒・24fps）</td></tr>
+      <tr><td>出力（パス）</td><td>例：<code>//heian_axis.mp4</code>。<code>//</code> は .blend と同じフォルダの意味</td></tr>
+      <tr><td>メディアタイプ</td><td><b>動画</b>（Blender 5.0 で追加された項目。4.x 以前は「ファイルフォーマット → FFmpeg 動画」）</td></tr>
+      <tr><td>エンコーディング → コンテナ</td><td><b>MPEG-4</b></td></tr>
+      <tr><td>動画 → 動画コーデック</td><td><b>H.264</b>（どの環境でも再生しやすい）</td></tr>
+      <tr><td>出力の品質</td><td><b>高品質</b>。ファイルを小さくしたいなら「中品質」</td></tr>
+    </table>
+    <p>解像度は上の <b>フォーマット</b> 欄（この写真では折りたたみ中）で、スクリプトの設定は 960×540 です。フルHDにするなら 1920×1080 にします（描画時間は約4倍）。</p>
+  </div>
+</div>
+<p>レンダープロパティのデバイスが <b>GPU演算</b> になっているかも確認してください（<a href="03_gui_still.html">3章の手順6</a>）。</p>
+
+<h2>4. アニメーションをレンダリングする</h2>
+<p><b>レンダー（Render）→ アニメーションをレンダリング（Render Animation）</b>（<kbd>Ctrl</kbd>+<kbd>F12</kbd>）を選ぶと、別ウィンドウで1フレームずつ描かれ、指定したパスに mp4 が書き出されます。途中でやめるときは <kbd>Esc</kbd>。</p>
+<figure>
+  <img src="img/v03_render_anim_progress.jpg" alt="アニメーションのレンダリング中のウィンドウ。上部に現在のフレーム番号と経過時間" loading="lazy">
+  <figcaption>レンダリング中。上部に <code>Frame:</code>（今描いているフレーム）、<code>Last:</code>（前のフレームにかかった時間）が出る。各フレームの描き始めは形状の準備（<code>Updating Geometry BVH</code>）のため、一瞬この市松模様になる。</figcaption>
+</figure>
+<figure>
+  <img src="img/v04_render_anim_done.jpg" alt="レンダリングが終わったウィンドウ。朱雀門付近のフレームが表示されている" loading="lazy">
+  <figcaption>描き終わったところ。この写真は動作確認のため 1〜48 フレーム（朱雀門に近づく最初の2秒）だけを描いた例。RTX 3060 で1フレーム約4秒、288フレームで約18分が目安。</figcaption>
+</figure>
+
+<div class="warn">
+<p><b>長い動画は「連番 PNG → まとめて mp4」が安全</b>：mp4 に直接書き出すと、途中で止まったときにそれまでの分が使えなくなることがあります。長時間のレンダリングは、メディアタイプを <b>画像（PNG）</b> にして連番で描き（または <code>scripts/render_axis_anim.ps1</code> を使い）、最後に次の手順でまとめるのがおすすめです。</p>
+</div>
+
+<h2 id="vse">5. 連番 PNG を Blender のビデオシーケンサーで mp4 にする</h2>
+<p>2章のステップ4や、上の方法で描いた <code>output/axis_anim/frame_0001.png〜0288.png</code> を1本の mp4 にします。3Dの再計算はしないので、数十秒で終わります。</p>
+<ol class="steps">
+  <li><b>ファイル（File）→ 新規（New）→ ビデオ編集（Video Editing）</b> で動画編集用の新しいファイルを作る。
+    <figure>
+      <img src="img/e01_vse_empty.jpg" alt="ビデオ編集ワークスペースの初期画面" loading="lazy">
+      <figcaption>ビデオ編集の初期画面。左上がファイルブラウザー、右上がプレビュー、下がシーケンサー（タイムライン）。</figcaption>
+    </figure>
+  </li>
+  <li>下のシーケンサーで <b>追加（Add）→ 画像／連番（Image/Sequence）</b> を選び、<code>output/axis_anim</code> フォルダを開いて <kbd>A</kbd> で全フレームを選び、<b>画像ストリップを追加</b> を押す。</li>
+  <li>出力プロパティで、解像度を連番と同じ <b>960 × 540</b>、フレームレートを <b>24 fps</b>、フレーム範囲を <b>1〜288</b> にする（ストリップの長さに合わせる）。</li>
+  <li>出力のパスを決め、メディアタイプ <b>動画</b>・コンテナ <b>MPEG-4</b>・コーデック <b>H.264</b> にする（手順3と同じ）。
+    <figure>
+      <img src="img/e02_vse_strip.jpg" alt="シーケンサーに連番の画像ストリップを1本置いた画面。プレビューに朱雀門付近のフレーム" loading="lazy">
+      <figcaption>288枚の連番を1本のストリップとして置いたところ。プレビューに今のフレームが映る。</figcaption>
+    </figure>
+  </li>
+  <li><b>レンダー → アニメーションをレンダリング</b>（<kbd>Ctrl</kbd>+<kbd>F12</kbd>）で mp4 が書き出される。
+    <figure>
+      <img src="img/e03_vse_done.jpg" alt="書き出し完了後のビデオ編集画面" loading="lazy">
+      <figcaption>書き出しが終わったところ。この例では <code>output/heian_axis_12s.mp4</code>（960×540・24fps・288フレーム・12秒）ができた。</figcaption>
+    </figure>
+  </li>
+</ol>
+<div class="cards" style="grid-template-columns: minmax(0, 300px) 1fr;">
+  <figure style="margin:0"><img src="img/e02b_vse_output.png" alt="ビデオ編集の出力プロパティ。解像度 960x540、24fps、フレーム範囲 1〜288" loading="lazy"></figure>
+  <figure style="margin:0"><img src="img/mp4_frame_9s.jpg" alt="書き出した mp4 の9秒目。朝堂院の間を大極殿へ進む" loading="lazy">
+    <figcaption>左：ビデオ編集での出力プロパティ（解像度・fps・フレーム範囲）。右：書き出した mp4 の9秒目（朝堂院の中を大極殿へ向かう）。</figcaption></figure>
+</div>
+<div class="note">
+<p>ビデオ編集の初期設定では音声コーデックが AAC になっていて、無音の音声トラックが付きます。不要なら出力プロパティの <b>エンコーディング → 音声</b> でコーデックを「なし」にします。</p>
+</div>
+<div class="note">
+<p>ビデオ編集のファイルはカラーマネジメントのビュー変換が <b>標準（Standard）</b> になっています。連番 PNG はすでに Filmic で仕上がった色なので、このままで色が変わりません。ここを Filmic などにすると二重にかかって色が薄くなります。</p>
+</div>
+<p>シーケンサーでは、タイトル文字（追加 → テキスト）、フェード（ストリップを選んで 追加 → フェード）、BGM（追加 → サウンド）も足せます。</p>
+
+<h2>6. 下書きを速く作る：ビューポートレンダー</h2>
+<p>構図やタイミングだけを確かめたいときは、3Dビューの <b>ビュー（View）→ ビューポートでアニメーションレンダリング（Viewport Render Animation）</b> を使うと、今の表示（ソリッドやマテリアルプレビュー）のまま数十秒で動画にできます。出力設定は手順3と同じものが使われます。</p>
+
+<div class="pager">
+  <a href="03_gui_still.html">← 3. GUIで静止画</a>
+  <a href="05_customize.html">5. カスタマイズ →</a>
+</div>
+</main>
+<footer><div class="inner">平安京 Blender 復元プロジェクト チュートリアル</div></footer>
+</body>
+</html>

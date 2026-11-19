@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>環境構築 — 平安京Blenderチュートリアル</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><div class="inner">
+  <a class="brand" href="index.html">平安京 Blender 復元</a>
+  <nav class="toc">
+    <a href="index.html">目次</a>
+    <a href="01_setup.html" aria-current="page">1. 環境構築</a>
+    <a href="02_run_scripts.html">2. スクリプト実行</a>
+    <a href="03_gui_still.html">3. GUIで静止画</a>
+    <a href="04_gui_video.html">4. GUIで動画</a>
+    <a href="05_customize.html">5. カスタマイズ</a>
+  </nav>
+</div></header>
+<main>
+<h1>1. 環境構築</h1>
+<p class="lead">Blender本体とこのリポジトリを用意し、コマンドラインから Blender を呼べる状態にします。所要時間は10〜20分です。</p>
+
+<h2>動作確認した環境</h2>
+<table>
+  <tr><th>項目</th><th>確認した構成</th><th>備考</th></tr>
+  <tr><td>OS</td><td>Windows 11 Pro</td><td>macOS / Linux でもスクリプトは動きます（パスの書き方だけ読み替え）</td></tr>
+  <tr><td>Blender</td><td>5.0.0（公式インストーラ版）</td><td>4.2 LTS 以降なら概ね動く見込み。未検証</td></tr>
+  <tr><td>CPU / メモリ</td><td>16スレッド / 32GB 推奨</td><td>市街レイヤー（v8）は約1.5万オブジェクト。16GB でも動くが重い</td></tr>
+  <tr><td>GPU</td><td>NVIDIA GeForce RTX 3060</td><td>任意。あれば GUI でのレンダリングが大幅に速くなる</td></tr>
+  <tr><td>Git</td><td>Git for Windows</td><td>リポジトリの取得に使用</td></tr>
+  <tr><td>FFmpeg</td><td>任意</td><td>連番PNGをコマンドラインで mp4 にする場合のみ。Blender だけでも動画化できます</td></tr>
+</table>
+
+<h2>手順1：Blender をインストールする</h2>
+<p>次のどちらかで入れます。</p>
+<h3>A. winget を使う（おすすめ）</h3>
+<p>PowerShell を開いて次を実行します。</p>
+<pre><code>winget install --id BlenderFoundation.Blender -e</code></pre>
+<h3>B. 公式サイトのインストーラを使う</h3>
+<p><a href="https://www.blender.org/download/">blender.org/download</a> から Windows 版の <code>.msi</code> を取得して実行します。既定のインストール先は次の場所です。</p>
+<pre><code>C:\Program Files\Blender Foundation\Blender 5.0\blender.exe</code></pre>
+
+<h2>手順2：コマンドラインから Blender を呼べるようにする</h2>
+<p>このプロジェクトのスクリプトは、<code>blender --background --python ...</code> の形で画面を出さずに実行します。毎回フルパスを書くのは長いので、PowerShell のエイリアスを作っておくと楽です。</p>
+<pre><code>Set-Alias blender "C:\Program Files\Blender Foundation\Blender 5.0\blender.exe"</code></pre>
+<p>この設定は PowerShell を閉じると消えます。常に使いたい場合は、<code>notepad $PROFILE</code> で開いたファイルに同じ行を書き足してください。</p>
+<p>確認：</p>
+<pre><code>blender --version</code></pre>
+<p><code>Blender 5.0.0</code> のように表示されれば完了です。</p>
+<div class="note">
+<p>Git Bash を使う場合は <code>alias blender="/c/Program Files/Blender Foundation/Blender 5.0/blender.exe"</code> を <code>~/.bashrc</code> に書きます。</p>
+</div>
+
+<h2>手順3：リポジトリを取得する</h2>
+<pre><code>git clone &lt;このリポジトリのURL&gt; yyBlenderHeian
+cd yyBlenderHeian</code></pre>
+<p>中身は次の構成です。</p>
+<table>
+  <tr><th>場所</th><th>内容</th></tr>
+  <tr><td><code>data/</code></td><td>配置データ（CSV）。施設の位置・大きさ・史料の確度</td></tr>
+  <tr><td><code>scripts/</code></td><td>Blender で動かす生成スクリプト（Python）と動画レンダリング用のシェルスクリプト</td></tr>
+  <tr><td><code>01_…〜10_….md</code></td><td>提案書・設計メモ（なぜその形にしたかの根拠）</td></tr>
+  <tr><td><code>output/</code></td><td>生成物（.blend と画像）。スクリプトを実行すると作られる。Git 管理外</td></tr>
+  <tr><td><code>docs/tutorial/</code></td><td>このチュートリアル</td></tr>
+</table>
+
+<h2>手順4（任意）：GPU レンダリングを有効にする</h2>
+<p>コマンドラインで動かすスクリプトは、GPU を自動で探して使います（<code>scripts/heian_gpu.py</code>。見つからなければ CPU）。GUI で作業するときは、次の設定をしておくと GPU で描けます。</p>
+<ol class="steps">
+  <li>Blender を起動し、メニューの <b>Edit（編集）→ Preferences（プリファレンス）</b> を開く。</li>
+  <li><b>System（システム）</b> の <b>Cycles Render Devices</b> で、NVIDIA なら <b>OptiX</b>（古い GPU は CUDA）、AMD なら <b>HIP</b> を選び、使う GPU にチェックを入れる。</li>
+  <li>レンダー設定の <b>Device</b> を <b>GPU Compute</b> にする（<a href="03_gui_still.html">3章</a>で実際の画面を示します）。</li>
+</ol>
+
+<h2>手順5（任意）：FFmpeg を入れる</h2>
+<p>連番 PNG をコマンドラインで動画にしたい場合だけ必要です。</p>
+<pre><code>winget install --id Gyan.FFmpeg -e</code></pre>
+
+<div class="note">
+<p><b>Blender 5.0 で出る警告について</b>：実行時に <code>DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0</code> が出ますが、5.x では問題なく動きます。将来の Blender 6.0 ではスクリプトの修正が必要になります。</p>
+</div>
+
+<div class="pager">
+  <a href="index.html">← 目次</a>
+  <a href="02_run_scripts.html">2. スクリプトを実行して平安京を生成する →</a>
+</div>
+</main>
+<footer><div class="inner">平安京 Blender 復元プロジェクト チュートリアル</div></footer>
+</body>
+</html>

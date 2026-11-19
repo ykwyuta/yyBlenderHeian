@@ -40,6 +40,7 @@ v8は市街レイヤーを追加したもの（2026-11-19、利用者が範囲�
 | `data/daidairi_facilities.csv` | 施設マスタ（機械可読） |
 | `data/daidairi_layout_v0.csv` | 配置座標v0（38件、模式図レベル）。ブロックアウト生成の入力 |
 | `scripts/build_daidairi_blockout.py` | 配置CSVからブロックアウトを生成し .blend と真上確認画像を出すスクリプト |
+| `docs/tutorial/index.html` | チュートリアル（環境構築、スクリプト実行、GUIでの静止画・動画づくり、カスタマイズ）。Windows 11＋Blender 5.0 で確認 |
 
 ## 一行で言うと
 

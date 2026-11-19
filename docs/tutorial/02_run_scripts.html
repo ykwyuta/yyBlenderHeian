@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>スクリプト実行 — 平安京Blenderチュートリアル</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><div class="inner">
+  <a class="brand" href="index.html">平安京 Blender 復元</a>
+  <nav class="toc">
+    <a href="index.html">目次</a>
+    <a href="01_setup.html">1. 環境構築</a>
+    <a href="02_run_scripts.html" aria-current="page">2. スクリプト実行</a>
+    <a href="03_gui_still.html">3. GUIで静止画</a>
+    <a href="04_gui_video.html">4. GUIで動画</a>
+    <a href="05_customize.html">5. カスタマイズ</a>
+  </nav>
+</div></header>
+<main>
+<h1>2. スクリプトを実行して平安京を生成する</h1>
+<p class="lead">画面を出さない「バックグラウンド実行」で、配置CSVから大内裏 → 市街 → 動画用カメラの順にモデルを作ります。コマンドはすべてリポジトリの直下（<code>yyBlenderHeian</code>）で実行します。</p>
+
+<h2>全体の流れ</h2>
+<table>
+  <tr><th>ステップ</th><th>スクリプト</th><th>入力</th><th>出力（<code>output/</code>）</th><th>実測時間</th></tr>
+  <tr><td>1. 大内裏</td><td><code>build_chodoin_detailed.py</code></td><td>配置CSV v3.1＋推定CSV</td><td><code>heian_daidairi_detail_v7.blend</code>、確認画像2枚</td><td>約31分</td></tr>
+  <tr><td>2. 市街</td><td><code>build_city_layer.py</code></td><td>v7</td><td><code>heian_daidairi_detail_v8.blend</code>、確認画像3枚</td><td>約1分</td></tr>
+  <tr><td>3. 動画カメラ</td><td><code>setup_axis_animation.py</code></td><td>v7</td><td><code>heian_daidairi_axis_anim.blend</code>、試し描き4枚</td><td>約20秒</td></tr>
+  <tr><td>4. 動画の連番</td><td><code>render_axis_anim.ps1</code></td><td>動画用 .blend</td><td><code>axis_anim/frame_0001〜0288.png</code></td><td>約18分</td></tr>
+</table>
+<p>時間は Windows 11・16スレッドCPU・RTX 3060 で実測した値です。ステップ1はオブジェクトを1つずつ作る処理（CPU・ほぼ単一スレッド）が大半で、GPU では速くなりません。ステップ1の最後の確認画像と、ステップ2〜4のレンダリングは GPU で描きます。</p>
+
+<div class="note">
+<p><b>GPU について</b>：スクリプトは <code>scripts/heian_gpu.py</code> で GPU を自動で探し、OptiX → CUDA → HIP → oneAPI → Metal の順に使えるものを選びます。見つからなければ CPU で描きます。ログに <code>RENDER_DEVICE OPTIX ['NVIDIA GeForce RTX 3060']</code> のように表示されます。CPU に固定したいときは <code>$env:HEIAN_DEVICE = "CPU"</code> を設定してください。</p>
+</div>
+
+<h2>準備</h2>
+<p>PowerShell を開き、リポジトリ直下に移動して、<a href="01_setup.html">1章</a>のエイリアスを設定しておきます。</p>
+<pre><code>cd D:\workspace\yyBlenderHeian
+Set-Alias blender "C:\Program Files\Blender Foundation\Blender 5.0\blender.exe"</code></pre>
+
+<h2>ステップ1：大内裏モデル（v7）を作る</h2>
+<pre><code>blender --background --python scripts/build_chodoin_detailed.py -- `
+  data/daidairi_layout_v3_1.csv `
+  output/heian_daidairi_detail_v7.blend `
+  output/view_v7 `
+  data/daidairi_conjectural_v1.csv</code></pre>
+<p><code>--</code> より後ろがスクリプトへの引数です。</p>
+<table>
+  <tr><th>引数</th><th>意味</th></tr>
+  <tr><td>1つめ</td><td>配置CSV（採用版 v3.1）</td></tr>
+  <tr><td>2つめ</td><td>保存する .blend</td></tr>
+  <tr><td>3つめ</td><td>確認画像の接頭辞。<code>_top.png</code>（真上）と <code>_hero.png</code>（南東上空）が付く</td></tr>
+  <tr><td>4つめ（省略可）</td><td>推定レイヤーCSV。省略すると根拠のある施設だけの v6 相当になる</td></tr>
+</table>
+<p>終わると最後に次のように表示されます。</p>
+<pre><code>CONJECTURAL_DONE rows=22 objects=417
+Info: Saved as "heian_daidairi_detail_v7.blend"
+DETAIL_DONE detail=61 context=21 objects=5659</code></pre>
+<figure>
+  <img src="img/run_v7_hero.jpg" alt="v7 の確認画像：南東上空から大内裏全体を見下ろした図" loading="lazy">
+  <figcaption>ステップ1の確認画像 <code>output/view_v7_hero.png</code>。中央やや左の緑の屋根が大極殿、その南に朝堂院の12堂が並ぶ。</figcaption>
+</figure>
+
+<h2>ステップ2：市街レイヤー（v8）を足す</h2>
+<p>v7 を開いた状態でスクリプトを実行します（<code>.blend</code> を <code>--python</code> より前に書きます）。</p>
+<pre><code>blender --background output/heian_daidairi_detail_v7.blend --python scripts/build_city_layer.py</code></pre>
+<pre><code>CITY_DONE plots=1088 kinds={2: 301, 1: 239, 4: 385, 0: 142, 3: 21} objects=19891
+SAVED_V8</code></pre>
+<p>乱数の種が固定（818）なので、何度実行しても同じ町並み（1,088町・19,891オブジェクト）になります。</p>
+<figure>
+  <img src="img/run_v8_hero.jpg" alt="v8 の確認画像：平安京全域を南東上空から見た図" loading="lazy">
+  <figcaption><code>output/view_v8_hero.png</code>。緑の区画は畑・空地、青い四角は神泉苑。右京（左側）ほど畑が多い。</figcaption>
+</figure>
+
+<h2>ステップ3：軸線動画のカメラを設定する</h2>
+<pre><code>blender --background output/heian_daidairi_detail_v7.blend --python scripts/setup_axis_animation.py</code></pre>
+<p>朱雀大路 → 朱雀門 → 応天門 → 会昌門 → 朝堂院 → 大極殿と進むカメラ（12秒・288フレーム・24fps）を付けて <code>output/heian_daidairi_axis_anim.blend</code> に保存し、1・96・216・288 フレーム目を試し描きします。</p>
+<pre><code>ANIM_SAVED
+TEST_FRAME 1 sec=4.8
+TEST_FRAME 96 sec=3.3
+TEST_FRAME 216 sec=3.1
+TEST_FRAME 288 sec=3.1
+SETUP_DONE</code></pre>
+<div class="note"><p>市街まで入れた動画にしたいときは、v7 の代わりに v8 を開いて同じコマンドを実行します。オブジェクトが約4倍になるので、レンダリング時間も長くなります。</p></div>
+
+<h2>ステップ4：動画の全フレームを描く</h2>
+<pre><code>powershell -ExecutionPolicy Bypass -File scripts/render_axis_anim.ps1</code></pre>
+<p>24フレームずつ区切って描き、描き終わった区切りは次回飛ばします。途中で止めても、もう一度実行すれば続きから再開できます。Git Bash や Linux / macOS では <code>bash scripts/render_axis_anim.sh</code> が同じ動きをします。</p>
+<pre><code>RENDER chunk 97-120 22:28:20
+RENDER chunk 121-144 22:29:49
+...
+RENDER chunk 265-288 22:39:15
+ALL_CHUNKS_DONE 288 frames</code></pre>
+<figure>
+  <img src="img/run_anim_frames.jpg" alt="動画の4フレーム：朱雀大路、朱雀門通過後、朝堂院、大極殿前" loading="lazy">
+  <figcaption>連番の例（左上から 1・96・216・288 フレーム目）。</figcaption>
+</figure>
+
+<h3>連番 PNG を mp4 にする</h3>
+<p>方法は2つあります。</p>
+<ul>
+  <li><b>Blender の GUI で</b>：ビデオシーケンサーに連番を読み込んで mp4 に書き出す（<a href="04_gui_video.html#vse">4章</a>）。追加のソフトは不要です。</li>
+  <li><b>FFmpeg で</b>：
+<pre><code>ffmpeg -framerate 24 -i output/axis_anim/frame_%04d.png -c:v libx264 -pix_fmt yuv420p -crf 18 output/heian_axis_12s.mp4</code></pre></li>
+</ul>
+
+<h2>別の視点の静止画を追加で描く</h2>
+<p>保存済みの .blend から、軸線（朱雀門→大極殿）を南東上空から見た斜め図と、朝堂院の内側から大極殿を見た図の2枚を描きます（GPU で約12秒）。</p>
+<pre><code>blender --background output/heian_daidairi_detail_v7.blend --python scripts/render_views.py -- output/extra</code></pre>
+<p>視点は <code>render_views.py</code> の <code>views</code> リストで変えられます（<a href="05_customize.html">5章</a>）。</p>
+
+<h2>出力先を変える</h2>
+<p>ステップ2〜4の出力先は既定で <code>&lt;リポジトリ&gt;/output</code> です。環境変数 <code>HEIAN_WORK</code> で変えられます。ステップ1は引数で渡したパスに出力します。</p>
+<pre><code>$env:HEIAN_WORK = "D:\heian_work"</code></pre>
+
+<h2>うまくいかないとき</h2>
+<table>
+  <tr><th>症状</th><th>対処</th></tr>
+  <tr><td><code>blender</code> が見つからない</td><td>エイリアスを設定し直す（PowerShell を開き直すと消えます）。または <code>&amp; "C:\Program Files\Blender Foundation\Blender 5.0\blender.exe"</code> とフルパスで呼ぶ</td></tr>
+  <tr><td>ステップ1が終わらないように見える</td><td>約30分かかります。タスクマネージャーで blender.exe が CPU を使っていれば進んでいます</td></tr>
+  <tr><td><code>UnicodeDecodeError</code></td><td>CSV が UTF-8 で保存されていない。<a href="05_customize.html">5章</a>の注意を参照</td></tr>
+  <tr><td>画像が <code>C:\output</code> など思わぬ場所にできる</td><td>Blender は相対パスを独自の基準で解決します。本リポジトリのスクリプトは絶対パスに直してから保存するよう修正済みです。自作のスクリプトでも <code>os.path.abspath()</code> を通してください</td></tr>
+  <tr><td>ログに <code>HIPEW initialization failed</code></td><td>AMD 用ライブラリが無いという通知で、NVIDIA の環境では無視して構いません</td></tr>
+  <tr><td>描画が遅い</td><td>ログの <code>RENDER_DEVICE</code> が CPU になっていないか確認。GPU ドライバを更新する</td></tr>
+</table>
+
+<div class="pager">
+  <a href="01_setup.html">← 1. 環境構築</a>
+  <a href="03_gui_still.html">3. GUIで静止画を作る →</a>
+</div>
+</main>
+<footer><div class="inner">平安京 Blender 復元プロジェクト チュートリアル</div></footer>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>カスタマイズガイド — 平安京Blenderチュートリアル</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><div class="inner">
+  <a class="brand" href="index.html">平安京 Blender 復元</a>
+  <nav class="toc">
+    <a href="index.html">目次</a>
+    <a href="01_setup.html">1. 環境構築</a>
+    <a href="02_run_scripts.html">2. スクリプト実行</a>
+    <a href="03_gui_still.html">3. GUIで静止画</a>
+    <a href="04_gui_video.html">4. GUIで動画</a>
+    <a href="05_customize.html" aria-current="page">5. カスタマイズ</a>
+  </nav>
+</div></header>
+<main>
+<h1>5. スクリプトのカスタマイズガイド</h1>
+<p class="lead">配置・建物の形・色・光・市街の密度・カメラ経路を、どのファイルのどこを変えればよいかをまとめます。変更後は<a href="02_run_scripts.html">2章</a>の手順で該当ステップから再実行してください。</p>
+
+<h2>どこを変えるか（早見表）</h2>
+<table>
+  <tr><th>変えたいもの</th><th>ファイル</th><th>場所</th><th>再実行するステップ</th></tr>
+  <tr><td>施設の位置・大きさ</td><td><code>data/daidairi_layout_v3_1.csv</code></td><td>各行の <code>center_x_m</code> 〜 <code>size_y_m</code></td><td>ステップ1から</td></tr>
+  <tr><td>推定の建物を足す・消す</td><td><code>data/daidairi_conjectural_v1.csv</code></td><td>行の追加、<code>blockout</code> 列を <code>no</code></td><td>ステップ1から</td></tr>
+  <tr><td>建物の高さ・屋根・鴟尾</td><td><code>scripts/build_chodoin_detailed.py</code></td><td><code>build_detail()</code> / <code>build_detail_dairi()</code></td><td>ステップ1から</td></tr>
+  <tr><td>色・質感</td><td><code>scripts/build_chodoin_detailed.py</code></td><td><code>init_materials()</code></td><td>ステップ1から（GUIで直接変えても可）</td></tr>
+  <tr><td>太陽・空</td><td><code>scripts/build_chodoin_detailed.py</code></td><td><code>setup_sky()</code> と <code>main()</code> の Sun</td><td>ステップ1から（GUIで直接変えても可）</td></tr>
+  <tr><td>市街の密度・町並み</td><td><code>scripts/build_city_layer.py</code></td><td><code>weights()</code>、乱数の種 <code>818</code></td><td>ステップ2から</td></tr>
+  <tr><td>動画のカメラ経路・長さ</td><td><code>scripts/setup_axis_animation.py</code></td><td><code>KEYS</code>、<code>FPS</code>、<code>FRAME_END</code></td><td>ステップ3から</td></tr>
+  <tr><td>画質・解像度・速度</td><td>各スクリプトの末尾</td><td><code>samples</code>、<code>resolution_x/y</code>、<code>device</code></td><td>該当ステップ</td></tr>
+</table>
+
+<h2>座標系の約束</h2>
+<ul>
+  <li><b>原点は朱雀門の中心</b>。X＝東、Y＝北、Z＝上、単位はメートル。</li>
+  <li>大内裏は Y＝0〜1394 付近、大極殿は Y≒565、市街は Y がマイナス側（南）に広がり、羅城門は Y＝−3850。</li>
+  <li>CSV の <code>center_x_m, center_y_m</code> は施設の中心、<code>size_x_m, size_y_m</code> は東西・南北の幅です。</li>
+</ul>
+
+<h2>1. 配置データ（CSV）を変える</h2>
+<p>配置の入力は <code>data/daidairi_layout_v3_1.csv</code> です。列の意味：</p>
+<table>
+  <tr><th>列</th><th>意味</th></tr>
+  <tr><td><code>facility_id</code></td><td>施設ID。スクリプトはこのIDで「どの部品で作るか」を決める（例：<code>CHD_DAIGOKUDEN</code>＝大極殿）</td></tr>
+  <tr><td><code>name</code></td><td>和名。オブジェクト名の一部にもなる</td></tr>
+  <tr><td><code>type</code></td><td><code>gate</code> / <code>hall</code> / <code>zone</code> / <code>enclosure</code> / <code>wall</code> など。部品を持たない施設は、この種別で色付きの箱の高さが決まる</td></tr>
+  <tr><td><code>certainty</code></td><td>史料確度 A〜D。生成には使わず、記録用（<code>06_layout-coordinates.md</code> 参照）</td></tr>
+  <tr><td><code>basis_note</code></td><td>数値の根拠メモ</td></tr>
+  <tr><td><code>blockout</code></td><td><code>no</code> にすると生成しない</td></tr>
+</table>
+<h3>例：大極殿を北へ10m動かす</h3>
+<p><code>CHD_DAIGOKUDEN</code> の行の <code>center_y_m</code> に 10 を足すだけです。ただし回廊（<code>build_chodoin_corridors()</code>）や動画のカメラ経路は座標を直接持っているので、大きく動かす場合はそちらも合わせて調整してください。</p>
+
+<div class="warn">
+<p>Excel で CSV を開いて保存すると文字コードが Shift_JIS に変わり、スクリプトが読めなくなることがあります。VS Code など UTF-8 で保存できるエディタを使うか、Excel では「CSV UTF-8」形式で保存してください。</p>
+</div>
+
+<h2>2. 推定レイヤーに建物を足す（いちばん簡単な追加方法）</h2>
+<p><code>data/daidairi_conjectural_v1.csv</code> に行を足すと、IDごとの分岐を書かなくても <code>type</code> に応じた汎用部品で建物になります。生成物は <code>COL_80_Conjectural</code> コレクションに入り、属性 <code>evidence=conjectural</code> が付くので、根拠のあるデータと混ざりません。</p>
+<table>
+  <tr><th>type</th><th>生成されるもの</th></tr>
+  <tr><td><code>hall</code></td><td>殿舎（基壇＋白壁＋朱柱＋寄棟屋根）。幅24m以上なら基壇が高くなる</td></tr>
+  <tr><td><code>warehouse</code></td><td>低い倉庫風の殿舎</td></tr>
+  <tr><td><code>compound_wall</code></td><td>区画を囲む築地塀（南辺中央に開口）</td></tr>
+  <tr><td><code>office_compound</code></td><td>汎用庁舎の充填＋築地塀</td></tr>
+  <tr><td><code>court_sand</code></td><td>白砂の庭</td></tr>
+</table>
+<pre><code>facility_id,name,type,center_x_m,center_y_m,size_x_m,size_y_m,certainty,basis_note,blockout
+CONJ_MY_HALL,試しの殿舎,hall,150,700,30,14,D,チュートリアルの例,yes</code></pre>
+
+<h2>3. 建物の形を変える</h2>
+<p>建物は <code>scripts/build_chodoin_detailed.py</code> の部品関数で作られます。</p>
+<table>
+  <tr><th>関数</th><th>作るもの</th><th>主な引数</th></tr>
+  <tr><td><code>make_hall()</code></td><td>殿舎</td><td><code>roof_w, roof_d</code>（軒先寸法）、<code>kidan=(幅,奥行,高さ)</code>、<code>wall_h</code>、<code>roof_h</code>、<code>roof_mat</code>、<code>shibi</code>（鴟尾の有無）</td></tr>
+  <tr><td><code>make_gate()</code></td><td>門・楼</td><td><code>w, d</code>、<code>upper</code>（二重屋根）、<code>passage</code>（通り抜け開口）</td></tr>
+  <tr><td><code>add_hip_roof()</code></td><td>反りのある寄棟屋根</td><td>軒の高さ <code>eave_z</code>、屋根高 <code>roof_h</code>。反りの曲線は <code>_roof_profile()</code></td></tr>
+  <tr><td><code>make_corridor_run()</code></td><td>回廊の直線区間</td><td>始点・終点の座標</td></tr>
+  <tr><td><code>infill_zone()</code></td><td>官衙ゾーンの模式的な庁舎の並び</td><td>style（<code>office</code> / <code>warehouse</code> / <code>stable</code>）</td></tr>
+</table>
+<h3>例：大極殿をさらに高くする</h3>
+<p><code>build_detail()</code> の大極殿の分岐を探します。</p>
+<pre><code>    elif fid == "CHD_DAIGOKUDEN":
+        make_hall("CHD_Daigokuden", cx, cy, 53, 26, col, fid,
+                  kidan=(59, 24, 2.0), wall_h=9.0, roof_h=14.0,
+                  roof_mat=MAT["roof_green"], shibi=True)</code></pre>
+<p><code>wall_h=9.0</code> を <code>11.0</code> に、<code>roof_h=14.0</code> を <code>16.0</code> にすれば全高が約4m上がります。<code>roof_mat=MAT["roof"]</code> にすれば緑釉瓦から通常の瓦色に変わります。</p>
+<h3>新しいIDに専用の形を与える</h3>
+<ol>
+  <li>配置CSVに行を追加する。</li>
+  <li>IDを集合 <code>DETAIL</code> に追加する（入れないと色付きの箱になる）。</li>
+  <li><code>build_detail()</code> に <code>elif fid == "新ID":</code> の分岐を書き、部品関数を呼ぶ。</li>
+  <li>入れたいコレクションは <code>main()</code> の分岐（<code>GATE_</code> なら <code>COL_01</code>、<code>DAIRI_</code> なら <code>COL_03</code>…）で決まります。</li>
+</ol>
+
+<h2>4. 色と質感を変える</h2>
+<p><code>init_materials()</code> に全マテリアルがまとまっています。<code>make_mat(名前, 基本色, 粗さ, color2=まだらの色, tex_scale=まだらの細かさ, bump=凹凸)</code> の形です。色は 0〜1 のリニアRGBです。</p>
+<pre><code>    MAT["vermilion"] = make_mat("MAT_Vermilion", (0.60, 0.10, 0.05), 0.55,
+                                color2=(0.48, 0.07, 0.035), tex_scale=0.6, bump=0.05)</code></pre>
+<p>例：朱をもっと鮮やかにするなら基本色を <code>(0.75, 0.12, 0.04)</code> に。経年で褪せた朱なら <code>(0.50, 0.18, 0.10)</code> 程度に下げます。</p>
+<div class="note">
+<p>試行錯誤は GUI のほうが速いです。生成済みの <code>.blend</code> を開き、<b>Shading</b> ワークスペースでマテリアル <code>MAT_Vermilion</code> の色を変えると、同じマテリアルを使う全建物に即座に反映されます。良い値が決まったらスクリプトに書き戻してください。</p>
+</div>
+
+<h2>5. 光と空を変える</h2>
+<ul>
+  <li><b>太陽</b>：<code>main()</code> 内の <code>sun_data.energy = 3.2</code>（明るさ）、<code>sun_data.color</code>（色）、<code>sun.rotation_euler = (0.9, 0.2, 0.6)</code>（向き。ラジアン）。夕景にするなら X 回転を 1.35 前後に倒し、色を <code>(1.0, 0.7, 0.45)</code> などに。</li>
+  <li><b>空</b>：<code>setup_sky()</code> の地平線色 <code>mix.inputs[1]</code> と天頂色 <code>mix.inputs[2]</code>、明るさ <code>bg.inputs["Strength"]</code>。</li>
+  <li><b>トーン</b>：<code>view_transform = "Filmic"</code>、<code>look = "Medium High Contrast"</code>、<code>exposure = 0.1</code>。Blender 4.0 以降の既定である <code>"AgX"</code> にすると、彩度の高い朱が飛びにくくなります。</li>
+</ul>
+
+<h2>6. 市街の町並みを変える</h2>
+<p><code>scripts/build_city_layer.py</code> は条坊の町（133m ピッチ）ごとに、確率で「貴族邸・官人宅・庶民町・寺・畑」を選んで作ります。</p>
+<ul>
+  <li><b>密度</b>：<code>weights(side, band)</code> の表。<code>side</code> が正なら左京（東）、負なら右京（西）。<code>band</code> は 0＝二条 … 6＝八条、−1＝宮の両側。各タプルは (貴族邸, 官人宅, 庶民町, 寺, 畑) の確率で、合計を1にします。</li>
+  <li><b>別の町並みにする</b>：<code>rng = random.Random(818)</code> の 818 を別の数にします。同じ数なら何度実行しても同じ町並みになります。</li>
+  <li><b>区画ごとの建て方</b>：<code>build_plot()</code> の <code>kind</code> ごとの分岐。</li>
+  <li><b>ランドマーク</b>（羅城門・東寺・西寺・東西市・神泉苑）はスクリプト中に座標を直接書いています。<code>data/heiankyo_city_landmarks_v1.csv</code> は根拠の記録で、生成には読み込んでいません。動かす場合はスクリプトと <code>SKIP_RECTS</code>（町を作らない範囲）の両方を直してください。</li>
+</ul>
+<div class="warn">
+<p>市街は約1.5万オブジェクトあります。<code>bpy.ops</code>（<code>primitive_cube_add</code> など）で作ると極端に遅くなるため、このスクリプトでは <code>fbox()</code> / <code>froof()</code> など共有メッシュを使う高速関数を使っています。市街に部品を足すときも、この高速関数を使ってください。</p>
+</div>
+
+<h2 id="camera">7. 動画のカメラ経路を変える</h2>
+<p><code>scripts/setup_axis_animation.py</code> の <code>KEYS</code> が経路です。1行が「フレーム番号、カメラ位置、注視点」です。</p>
+<pre><code>KEYS = [
+    (1,   (0, -170, 3.0), (0, 0, 8)),      # 朱雀大路から朱雀門を見る
+    (60,  (0, -45, 2.3),  (0, 180, 9)),
+    (96,  (0, 5, 2.2),    (0, 250, 10)),   # 朱雀門をくぐる
+    ...
+    (288, (0, 445, 8.0),  (0, 565, 16)),   # 大極殿の前
+]</code></pre>
+<ul>
+  <li>門の開口は地面から約1.0〜3.9mです。門を通過するフレームではカメラの Z を 2.2〜2.6 に保ってください（高すぎると屋根を突き抜けます）。</li>
+  <li>長さを変えるなら <code>FRAME_END</code> と最後のキーのフレーム番号を合わせます。24fps なので 288 フレーム＝12秒。</li>
+  <li>GUI でカメラを動かしてキーを打つ方法は <a href="04_gui_video.html">4章</a>を参照。</li>
+</ul>
+
+<h2>8. 画質・速度の調整</h2>
+<table>
+  <tr><th>設定</th><th>スクリプトでの書き方</th><th>目安</th></tr>
+  <tr><td>サンプル数</td><td><code>scene.cycles.samples = 32</code></td><td>下書き 16、納品 64〜128（デノイズ併用なら 32 でも可）</td></tr>
+  <tr><td>解像度</td><td><code>scene.render.resolution_x, resolution_y</code></td><td>動画 1920×1080、確認用 960×540</td></tr>
+  <tr><td>GPU</td><td><code>scene.cycles.device = "GPU"</code></td><td>事前にプリファレンスで OptiX/CUDA を有効にしておく（<a href="01_setup.html">1章</a>）</td></tr>
+  <tr><td>デノイズ</td><td><code>scene.cycles.use_denoising = True</code></td><td>Windows 公式版には OpenImageDenoise が入っているので有効にできる。元の Linux 環境では使えなかったため既定は False</td></tr>
+  <tr><td>エンジン</td><td><code>scene.render.engine = "BLENDER_EEVEE"</code></td><td>リアルタイム系。動画の下書きを数分で作りたいとき</td></tr>
+</table>
+
+<h2>9. 開発のコツ</h2>
+<ul>
+  <li><b>出力先を分ける</b>：環境変数 <code>HEIAN_WORK</code> を設定すると、v8・動画用 .blend・画像の出力先を切り替えられます（試作用と本番用を分けるのに便利）。
+<pre><code>$env:HEIAN_WORK = "D:\heian_test"</code></pre></li>
+  <li><b>GUI の中でスクリプトを試す</b>：<b>Scripting</b> ワークスペースのテキストエディタでスクリプトを開き、<kbd>Alt</kbd>+<kbd>P</kbd> で実行できます。ただし <code>build_chodoin_detailed.py</code> はコマンドライン引数を前提にしているので、小さな試験コードで部品関数を呼ぶ形が扱いやすいです。</li>
+  <li><b>オブジェクトの属性</b>：生成物には <code>facility_id</code>、<code>evidence</code>（<code>conjectural</code> / <code>procedural_city</code>）のカスタムプロパティが付いています。GUI のオブジェクトプロパティ → Custom Properties で確認でき、絞り込みや書き出し時の区別に使えます。</li>
+  <li><b>根拠の記録</b>：数値を変えたら、CSV の <code>basis_note</code> や <code>07_building-parts.md</code> などの設計メモにも理由を残してください。このプロジェクトは「どこまでが根拠で、どこからが推定か」を分けて記録する方針です。</li>
+</ul>
+
+<div class="pager">
+  <a href="04_gui_video.html">← 4. GUIで動画を作る</a>
+  <a href="index.html">目次へ →</a>
+</div>
+</main>
+<footer><div class="inner">平安京 Blender 復元プロジェクト チュートリアル</div></footer>
+</body>
+</html>
