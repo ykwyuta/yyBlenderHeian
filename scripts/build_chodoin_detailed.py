@@ -13,6 +13,11 @@ v6（フェーズ6）: マテリアルにプロシージャルな質感（ノイ
 凹凸）を追加し、照明を暖色の太陽光＋空のグラデーション＋Filmic の
 コントラストに変更。v6モデル自体は v5 にこの変更を適用して作成した
 （build スクリプト側にも同じ変更を反映済み）。
+推定レイヤー（v7）: 第4引数に推定CSV（data/daidairi_conjectural_v1.csv、
+確度D）を渡すと、「あったはずだが根拠がない」施設を推測で補って生成する。
+見た目は区別しないが、データ上は専用コレクション COL_80_Conjectural と
+オブジェクト属性 evidence=conjectural で厳密に分離する。v7モデル自体は
+v6 へこのレイヤーを追加して作成した。
 
 部品:
   make_hall  : 基壇＋白壁＋朱柱＋寄棟屋根（＋鴟尾）の殿舎
@@ -422,11 +427,11 @@ INFILL_STYLE = {
     "ZOSHUSHI": "warehouse", "SHUISUSHI": "office", "SAMARYO": "stable",
 }
 
-def infill_zone(row, col):
+def infill_zone(row, col, style=None):
     """官衙ゾーンに汎用庁舎を並べる。個別の建物配置は未同定のため、
     ゾーンの用途に合わせた模式的な充填であり、実在の棟配置ではない。"""
     fid = row["facility_id"]
-    style = INFILL_STYLE[fid]
+    style = style or INFILL_STYLE[fid]
     cx, cy = float(row["center_x_m"]), float(row["center_y_m"])
     sx, sy = float(row["size_x_m"]), float(row["size_y_m"])
     # 地面の高さは 0.26 とし、宴の松原（0.28）など隣接スラブと同一平面にしない
@@ -483,6 +488,45 @@ def build_enclosure_compound(row, col, main_name):
               kidan=(33, 18, 1.0), wall_h=4.5)
     for s in (-1, 1):
         make_hall(fid + "_Side", cx + s * sx * 0.24, cy - sy * 0.16, 18, 11, col, fid, wall_h=3.4)
+
+def build_compound_wall(prefix, cx, cy, sx, sy, col):
+    """官衙区画を囲む築地塀（推定レイヤー用）。南辺中央に門の開口を空ける。
+    白い塀本体＋瓦色の笠木で表現する。"""
+    inset = 1.2
+    h, t = 2.4, 0.7
+    ix, iy = sx / 2 - inset, sy / 2 - inset
+    runs = [
+        ("N", cx, cy + iy, 2 * ix, t),
+        ("E", cx + ix, cy, t, 2 * iy),
+        ("W", cx - ix, cy, t, 2 * iy),
+    ]
+    gap = 8.0
+    seg = (2 * ix - gap) / 2
+    runs.append(("S1", cx - gap / 2 - seg / 2, cy - iy, seg, t))
+    runs.append(("S2", cx + gap / 2 + seg / 2, cy - iy, seg, t))
+    for tag, x, y, w, d in runs:
+        add_box(prefix + "_Wall" + tag, (x, y, h / 2), (w, d, h), MAT["white"], col, prefix)
+        add_box(prefix + "_Cap" + tag, (x, y, h + 0.15), (w, d + 0.35, 0.3), MAT["roof"], col, prefix)
+
+def build_conjectural(row, col):
+    """推定レイヤー（daidairi_conjectural_v1.csv）の1行を生成する。
+    根拠のある施設とは混ぜず、呼び出し側で専用コレクションに入れる。"""
+    fid = row["facility_id"]
+    cx, cy = float(row["center_x_m"]), float(row["center_y_m"])
+    sx, sy = float(row["size_x_m"]), float(row["size_y_m"])
+    typ = row["type"]
+    if typ == "compound_wall":
+        build_compound_wall(fid, cx, cy, sx, sy, col)
+    elif typ == "office_compound":
+        infill_zone(row, col, style="office")
+        build_compound_wall(fid, cx, cy, sx, sy, col)
+    elif typ == "warehouse":
+        make_hall(fid, cx, cy, sx + 3, sy + 3, col, fid, wall_h=2.8, roof_h=3.0)
+    elif typ == "court_sand":
+        add_box(fid + "_Sand", (cx, cy, 0.04), (sx, sy, 0.08), MAT["sand"], col, fid)
+    else:  # hall
+        kidan = (sx + 3, sy + 3, 0.8) if sx >= 24 else None
+        make_hall(fid, cx, cy, sx + 4, sy + 4, col, fid, kidan=kidan, wall_h=3.8)
 
 KOKYO_HALLS = {"DAIRI_SHOYOSHA", "DAIRI_HIGYOSHA", "DAIRI_REIKEIDEN",
                "DAIRI_SHOKADEN", "DAIRI_KOKIDEN", "DAIRI_GYOKASHA",
@@ -602,7 +646,8 @@ def build_detail(row, col):
 def main():
     argv = sys.argv
     args = argv[argv.index("--") + 1:]
-    csv_path, blend_out, prefix = args
+    csv_path, blend_out, prefix = args[0], args[1], args[2]
+    conj_path = args[3] if len(args) > 3 else None
 
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
@@ -679,6 +724,21 @@ def main():
         else:
             flat = context_box(row, col_ctx, palette_mats, flat)
             n_ctx += 1
+
+    # 推定レイヤー（任意）：根拠のある施設とは混ぜず、専用コレクションと
+    # オブジェクト属性 evidence=conjectural でデータ上区別する
+    if conj_path:
+        col_conj = get_or_make_collection("COL_80_Conjectural")
+        col_conj["layer"] = "conjectural"
+        with open(conj_path, newline="", encoding="utf-8") as f:
+            conj_rows = list(csv.DictReader(f))
+        for row in conj_rows:
+            if row.get("blockout", "yes") == "no":
+                continue
+            build_conjectural(row, col_conj)
+        for obj in col_conj.objects:
+            obj["evidence"] = "conjectural"
+        print("CONJECTURAL_DONE rows=%d objects=%d" % (len(conj_rows), len(col_conj.objects)))
 
     # 地面と朱雀大路（軸線ビューのための文脈）
     add_box("GROUND_Plane", (0, 697, -0.15), (2400, 2400, 0.3), MAT["earth"], col_ctx, "GROUND")

@@ -1,0 +1,8 @@
+facility_id,name,type,center_x_m,center_y_m,size_x_m,size_y_m,certainty,basis_note
+LM_RAJOMON,羅城門,gate,0,-3850,36,17,B,朱雀大路の南端・九条大路にあった京の正門。位置は条坊上の定点
+LM_TOJI,東寺（教王護国寺）,temple,480,-3760,150,150,B,九条大路の北、朱雀大路の東。平安京の官寺。五重塔は後世の再建で規模は模式
+LM_SAIJI,西寺,temple,-480,-3760,150,150,B,東寺と対になる官寺。右京側
+LM_EAST_MKT,東市,market,840,-1934,250,250,C,左京五条に置かれた官営市場。区画の中心は模式
+LM_WEST_MKT,西市,market,-840,-1934,250,250,C,右京五条の官営市場。東市と対
+LM_SHINSENEN,神泉苑,garden,800,-270,320,420,C,二条大路の南、大内裏の南東にあった禁苑。池の形状は模式
+CITY_FABRIC,市街（町並み）,procedural,0,-1925,4340,3850,D,条坊グリッド上の模式生成。個別の家に史料根拠はなく、密度と構成比のみ史料の傾向を反映（build_city_layer.py、乱数種818）

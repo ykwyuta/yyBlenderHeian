@@ -1,10 +1,12 @@
 #!/bin/bash
-# 軸線動画の分割レンダリング（48フレームずつ、完了済みチャンクはスキップ）
+# 軸線動画の分割レンダリング（24フレームずつ、完了済みチャンクはスキップ）
+# チャンクを小さくして、VM入れ替え時の再描画ロスを抑える
 cd ~/workspace/heiankyo-blender || exit 1
 OUT=output/axis_anim
 mkdir -p "$OUT"
-for start in 1 49 97 145 193 241; do
-  end=$((start + 47))
+for start in 1 25 49 73 97 121 145 169 193 217 241 265; do
+  end=$((start + 23))
+  if [ "$end" -gt 288 ]; then end=288; fi
   last=$(printf "%s/frame_%04d.png" "$OUT" "$end")
   if [ -f "$last" ]; then
     echo "SKIP chunk $start-$end"
