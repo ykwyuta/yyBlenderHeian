@@ -18,6 +18,12 @@ v6（フェーズ6）: マテリアルにプロシージャルな質感（ノイ
 見た目は区別しないが、データ上は専用コレクション COL_80_Conjectural と
 オブジェクト属性 evidence=conjectural で厳密に分離する。v7モデル自体は
 v6 へこのレイヤーを追加して作成した。
+部品v3（v10、2026-11-19）: 建物の精密化。大極殿・紫宸殿・清涼殿・
+仁寿殿・豊楽殿は入母屋造（寄棟の上に切妻を載せ、破風に懸魚、鴟尾は
+切妻の棟端へ）にし、その他の殿舎は棟端に鬼瓦を付けた。柱間は建物の
+規模で変える（大規模4.6m／中規模4.0m／小規模3.6m）。門の楼には
+縁側・高欄・連子窓を付けた。朝堂院と豊楽院の回廊は複廊（中央壁＋
+両側通路）にした。細部の大量配置には共有メッシュの fast_box を使う。
 
 部品:
   make_hall  : 基壇＋白壁＋朱柱＋寄棟屋根（＋鴟尾）の殿舎
@@ -49,9 +55,6 @@ import sys
 
 import bpy
 from mathutils import Vector
-import os as _os
-sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
-from heian_gpu import use_gpu  # noqa: E402  GPU があれば使う（HEIAN_DEVICE=CPU で無効）
 
 # ---------------------------------------------------------------- materials
 
@@ -241,10 +244,73 @@ def add_hip_roof(name, cx, cy, w, d, eave_z, roof_h, mat, col):
         add_box(name + "_Ridge", (cx, cy, top + 0.18), (0.55, max(0.4, d - w) + 0.8, 0.36), mat, col)
     return obj
 
+# ---------------------------------------------------------------- 精密化部品（v10）
+IRIMOYA_FIDS = {"CHD_DAIGOKUDEN", "DAIRI_SHISHINDEN", "DAIRI_SEIRYODEN",
+                "DAIRI_JIJU_JOKYO", "BURAKUDEN"}
+
+_FB_CUBES = {}
+
+def fast_box(name, loc, dims, mat, col, fid=None):
+    """共有立方体メッシュによる高速ボックス。高欄・格子などの細部を
+    大量に置くためのもので、bpy.ops を使わない。"""
+    key = mat.name if mat else "None"
+    mesh = _FB_CUBES.get(key)
+    if mesh is None:
+        mesh = bpy.data.meshes.new("SharedCube_" + key)
+        mesh.from_pydata(
+            [(-.5, -.5, -.5), (.5, -.5, -.5), (.5, .5, -.5), (-.5, .5, -.5),
+             (-.5, -.5, .5), (.5, -.5, .5), (.5, .5, .5), (-.5, .5, .5)],
+            [],
+            [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
+             (2, 6, 7, 3), (3, 7, 4, 0)])
+        mesh.update()
+        if mat:
+            mesh.materials.append(mat)
+        _FB_CUBES[key] = mesh
+    obj = bpy.data.objects.new(name, mesh)
+    obj.location = loc
+    obj.scale = dims
+    if fid:
+        obj["facility_id"] = fid
+    col.objects.link(obj)
+    return obj
+
+def add_gable_roof(name, cx, cy, w, d, eave_z, roof_h, mat, col, fid=None):
+    """切妻屋根（曲面断面、軒先に垂れ）。棟は w 方向。両端は妻面で閉じる。
+    入母屋の上段と、懸魚を付けるための破風として使う。"""
+    prof_t = [-1.0, -0.84, -0.68, -0.52, -0.36, -0.18, 0.0,
+              0.18, 0.36, 0.52, 0.68, 0.84, 1.0]
+    verts = []
+    for x in (-w / 2.0, w / 2.0):
+        for t in prof_t:
+            z = eave_z + roof_h * _roof_profile(1.0 - abs(t))
+            verts.append((cx + x, cy + t * d / 2.0, z))
+    n = len(prof_t)
+    faces = []
+    for i in range(n - 1):
+        faces.append((i, n + i, n + i + 1, i + 1))
+    faces.append(tuple(range(n - 1, -1, -1)))
+    faces.append(tuple(range(n, 2 * n)))
+    mesh = bpy.data.meshes.new(name + "Mesh")
+    mesh.from_pydata(verts, [], faces)
+    mesh.update()
+    for pi, poly in enumerate(mesh.polygons):
+        poly.use_smooth = pi < n - 1  # 妻面のみフラット
+    if mat:
+        mesh.materials.append(mat)
+    obj = bpy.data.objects.new(name, mesh)
+    col.objects.link(obj)
+    if fid:
+        obj["facility_id"] = fid
+    add_box(name + "_Ridge", (cx, cy, eave_z + roof_h + 0.12),
+            (w * 0.94, 0.5, 0.28), mat, col, fid)
+    return obj
+
 # ---------------------------------------------------------------- builders
 
 def make_hall(prefix, cx, cy, roof_w, roof_d, col, fid,
-              kidan=None, wall_h=3.6, roof_h=None, roof_mat=None, shibi=False):
+              kidan=None, wall_h=3.6, roof_h=None, roof_mat=None, shibi=False,
+              roof_type=None):
     """殿舎。roof_w/roof_d は屋根（軒先）寸法。kidan=(w,d,h) or None。"""
     roof_mat = roof_mat or MAT["roof"]
     if kidan:
@@ -259,7 +325,8 @@ def make_hall(prefix, cx, cy, roof_w, roof_d, col, fid,
     # 朱柱：長辺側に等間隔、短辺側に両端
     long_is_x = roof_w >= roof_d
     span = max(bw, bd)
-    n = max(2, int(span / 4.0))
+    bay = 4.6 if roof_w >= 38 else (3.6 if roof_w <= 20 else 4.0)  # 柱間は規模で変える
+    n = max(2, int(round(span / bay)))
     for i in range(n + 1):
         t = -span / 2 + span * i / n
         if long_is_x:
@@ -273,7 +340,22 @@ def make_hall(prefix, cx, cy, roof_w, roof_d, col, fid,
     eave_z = base_z + wall_h + 0.55
     rh = roof_h if roof_h else min(roof_w, roof_d) * 0.42
     add_hip_roof(prefix + "_Roof", cx, cy, roof_w, roof_d, eave_z, rh, roof_mat, col)
-    if shibi:
+    irimoya = roof_type == "irimoya" or (roof_type is None and fid in IRIMOYA_FIDS)
+    if irimoya:
+        # 切妻の載せ方：寄棟の上部に、切妻の下端が屋根面へわずかに
+        # 食い込んで接する寸法にする（浮かせると帯状の影ができ、
+        # 深く沈めると棟しか見えなくなる。v10の近景確認で調整した値）
+        gw, gd = roof_w * 0.58, roof_d * 0.44
+        gz, gh = eave_z + rh * 0.62, rh * 0.50
+        add_gable_roof(prefix + "_RoofGable", cx, cy, gw, gd, gz, gh, roof_mat, col, fid)
+        for sx in (-1, 1):  # 破風の懸魚
+            fast_box(prefix + "_Gegyo", (cx + sx * (gw / 2 + 0.05), cy, gz + gh - 0.35),
+                     (0.14, 0.55, 0.85), MAT["wood"], col, fid)
+        if shibi:  # 鴟尾は切妻の棟端へ移す
+            for sx in (-1, 1):
+                add_box(prefix + "_Shibi", (cx + sx * gw * 0.44, cy, gz + gh + 0.55),
+                        (0.55, 0.85, 1.3), MAT["gold"], col, fid)
+    elif shibi:
         top = eave_z + rh + 0.2
         if long_is_x:
             r = max(0.2, (roof_w - roof_d) / 2.0)
@@ -283,6 +365,18 @@ def make_hall(prefix, cx, cy, roof_w, roof_d, col, fid,
             r = max(0.2, (roof_d - roof_w) / 2.0)
             for sy in (-1, 1):
                 add_box(prefix + "_Shibi", (cx, cy + sy * r, top + 0.45), (0.85, 0.55, 1.3), MAT["gold"], col, fid)
+    elif roof_w >= 15:  # 棟端の鬼瓦
+        top = eave_z + rh + 0.1
+        if long_is_x:
+            r = max(0.2, (roof_w - roof_d) / 2.0)
+            for sx in (-1, 1):
+                fast_box(prefix + "_Onigawara", (cx + sx * r, cy, top + 0.3),
+                         (0.45, 0.6, 0.65), MAT["stone"], col, fid)
+        else:
+            r = max(0.2, (roof_d - roof_w) / 2.0)
+            for sy in (-1, 1):
+                fast_box(prefix + "_Onigawara", (cx, cy + sy * r, top + 0.3),
+                         (0.6, 0.45, 0.65), MAT["stone"], col, fid)
 
 def make_gate(prefix, cx, cy, w, d, col, fid, upper=True, passage=True):
     """二重屋根の門。w は間口（東西）、d は奥行。
@@ -322,22 +416,64 @@ def make_gate(prefix, cx, cy, w, d, col, fid, upper=True, passage=True):
             for sy in (-1, 1):
                 add_cylinder(prefix + "_Col2", (cx + sx * uw / 2, cy + sy * ud / 2, 7.3 + 1.3),
                              0.22, 3.0, MAT["vermilion"], col)
+        # 縁側・高欄・連子窓（v10の精密化）
+        deck_w, deck_d = uw + 2.6, ud + 2.6
+        fast_box(prefix + "_Deck", (cx, cy, 7.22), (deck_w, deck_d, 0.22), MAT["wood"], col, fid)
+        per_x, per_y = deck_w / 2 - 0.15, deck_d / 2 - 0.15
+        nx = max(2, int(deck_w / 1.7))
+        ny = max(2, int(deck_d / 1.7))
+        for i in range(nx + 1):
+            x = cx - per_x + 2 * per_x * i / nx
+            for sy in (-1, 1):
+                fast_box(prefix + "_RailPost", (x, cy + sy * per_y, 7.33 + 0.43),
+                         (0.1, 0.1, 0.85), MAT["vermilion"], col, fid)
+        for i in range(ny + 1):
+            y = cy - per_y + 2 * per_y * i / ny
+            for sx in (-1, 1):
+                fast_box(prefix + "_RailPost", (cx + sx * per_x, y, 7.33 + 0.43),
+                         (0.1, 0.1, 0.85), MAT["vermilion"], col, fid)
+        for zoff in (0.82, 0.45):
+            fast_box(prefix + "_Rail", (cx, cy - per_y, 7.33 + zoff),
+                     (deck_w - 0.2, 0.09, 0.09), MAT["vermilion"], col, fid)
+            fast_box(prefix + "_Rail", (cx, cy + per_y, 7.33 + zoff),
+                     (deck_w - 0.2, 0.09, 0.09), MAT["vermilion"], col, fid)
+            fast_box(prefix + "_Rail", (cx - per_x, cy, 7.33 + zoff),
+                     (0.09, deck_d - 0.2, 0.09), MAT["vermilion"], col, fid)
+            fast_box(prefix + "_Rail", (cx + per_x, cy, 7.33 + zoff),
+                     (0.09, deck_d - 0.2, 0.09), MAT["vermilion"], col, fid)
+        lat_w = uw * 0.72
+        nlat = max(4, int(lat_w / 0.55))
+        for sy in (-1, 1):
+            for i in range(nlat + 1):
+                x = cx - lat_w / 2 + lat_w * i / nlat
+                fast_box(prefix + "_Lattice", (x, cy + sy * (ud / 2 + 0.06), 7.3 + 1.3),
+                         (0.07, 0.05, 2.1), MAT["wood"], col, fid)
+            fast_box(prefix + "_LatticeBand", (cx, cy + sy * (ud / 2 + 0.05), 7.3 + 2.42),
+                     (lat_w + 0.3, 0.06, 0.18), MAT["wood"], col, fid)
+            fast_box(prefix + "_LatticeBand", (cx, cy + sy * (ud / 2 + 0.05), 7.3 + 0.18),
+                     (lat_w + 0.3, 0.06, 0.18), MAT["wood"], col, fid)
         add_hip_roof(prefix + "_Roof2", cx, cy, w * 0.82, d * 1.05, 7.3 + 2.6 + 0.4, 2.8, MAT["roof"], col)
         top = 7.3 + 2.6 + 0.4 + 2.8 + 0.2
         r = max(0.2, (w * 0.82 - d * 1.05) / 2.0)
         for sx in (-1, 1):
             add_box(prefix + "_Shibi", (cx + sx * r, cy, top + 0.4), (0.5, 0.8, 1.1), MAT["gold"], col, fid)
 
-def make_corridor_run(prefix, x1, y1, x2, y2, col):
-    """回廊の直線区間（軸平行のみ）。礎石代わりの台＋朱柱列＋低い屋根。"""
+def make_corridor_run(prefix, x1, y1, x2, y2, col, double=False):
+    """回廊の直線区間（軸平行のみ）。礎石代わりの台＋朱柱列＋低い屋根。
+    double=True は複廊：幅を広げ、中央に壁を立てて両側が通路になる。"""
     horizontal = (y1 == y2)
     length = abs(x2 - x1) if horizontal else abs(y2 - y1)
     cx, cy = (x1 + x2) / 2.0, (y1 + y2) / 2.0
-    width = 3.6
+    width = 5.2 if double else 3.6
     if horizontal:
         add_box(prefix + "_Base", (cx, cy, 0.15), (length, width, 0.3), MAT["stone"], col, "CHD_CORRIDOR")
     else:
         add_box(prefix + "_Base", (cx, cy, 0.15), (width, length, 0.3), MAT["stone"], col, "CHD_CORRIDOR")
+    if double:
+        if horizontal:
+            add_box(prefix + "_MidWall", (cx, cy, 0.3 + 0.95), (length, 0.28, 1.9), MAT["white"], col, "CHD_CORRIDOR")
+        else:
+            add_box(prefix + "_MidWall", (cx, cy, 0.3 + 0.95), (0.28, length, 1.9), MAT["white"], col, "CHD_CORRIDOR")
     n = max(2, int(length / 4.5))
     for i in range(n + 1):
         t = -length / 2.0 + length * i / n
@@ -348,19 +484,20 @@ def make_corridor_run(prefix, x1, y1, x2, y2, col):
             else:
                 add_cylinder(prefix + "_Col", (cx + s * (width / 2 - 0.25), cy + t, 0.3 + 1.3),
                              0.09, 2.6, MAT["vermilion"], col)
+    eave_z, rh = (3.3, 1.35) if double else (3.15, 1.15)
     if horizontal:
-        add_hip_roof(prefix + "_Roof", cx, cy, length + 1.2, width + 1.0, 3.15, 1.15, MAT["roof"], col)
+        add_hip_roof(prefix + "_Roof", cx, cy, length + 1.2, width + 1.2, eave_z, rh, MAT["roof"], col)
     else:
-        add_hip_roof(prefix + "_Roof", cx, cy, width + 1.0, length + 1.2, 3.15, 1.15, MAT["roof"], col)
+        add_hip_roof(prefix + "_Roof", cx, cy, width + 1.2, length + 1.2, eave_z, rh, MAT["roof"], col)
 
 def build_chodoin_corridors(col):
     """朝堂院の回廊。区画（x -85..85、y 180..586）の内側に沿って張る。
     南辺は応天門と両脇の楼を避けて両側に分断する。北辺は大極殿基壇の北側。"""
-    make_corridor_run("KAIRO_E", 78, 190, 78, 581, col)
-    make_corridor_run("KAIRO_W", -78, 190, -78, 581, col)
-    make_corridor_run("KAIRO_N", -78, 581, 78, 581, col)
-    make_corridor_run("KAIRO_S_E", 24, 190, 78, 190, col)
-    make_corridor_run("KAIRO_S_W", -78, 190, -24, 190, col)
+    make_corridor_run("KAIRO_E", 78, 190, 78, 581, col, double=True)
+    make_corridor_run("KAIRO_W", -78, 190, -78, 581, col, double=True)
+    make_corridor_run("KAIRO_N", -78, 581, 78, 581, col, double=True)
+    make_corridor_run("KAIRO_S_E", 24, 190, 78, 190, col, double=True)
+    make_corridor_run("KAIRO_S_W", -78, 190, -24, 190, col, double=True)
 
 def rotate_objects_90(objs, cx, cy):
     """生成直後のオブジェクト群を中心 (cx, cy) の周りに90度回す。
@@ -401,10 +538,10 @@ def build_dairi_corridors(col):
 def build_burakuin_corridors(col):
     """豊楽院の回廊。区画（x -380..-180、y 200..560）の内側に沿う。
     門の施設データがないため分断せず一周させる（模式）。"""
-    make_corridor_run("B_KAIRO_E", -187, 207, -187, 553, col)
-    make_corridor_run("B_KAIRO_W", -373, 207, -373, 553, col)
-    make_corridor_run("B_KAIRO_N", -373, 553, -187, 553, col)
-    make_corridor_run("B_KAIRO_S", -373, 207, -187, 207, col)
+    make_corridor_run("B_KAIRO_E", -187, 207, -187, 553, col, double=True)
+    make_corridor_run("B_KAIRO_W", -373, 207, -373, 553, col, double=True)
+    make_corridor_run("B_KAIRO_N", -373, 553, -187, 553, col, double=True)
+    make_corridor_run("B_KAIRO_S", -373, 207, -187, 207, col, double=True)
 
 def _hash01(*keys):
     h = int(hashlib.md5(":".join(str(k) for k in keys).encode()).hexdigest()[:8], 16)
@@ -650,8 +787,6 @@ def main():
     argv = sys.argv
     args = argv[argv.index("--") + 1:]
     csv_path, blend_out, prefix = args[0], args[1], args[2]
-    # Blender は相対パスをカレントディレクトリ基準で解決しないため、絶対パスにしておく
-    blend_out, prefix = _os.path.abspath(blend_out), _os.path.abspath(prefix)
     conj_path = args[3] if len(args) > 3 else None
 
     bpy.ops.object.select_all(action="SELECT")
@@ -759,7 +894,7 @@ def main():
 
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    use_gpu(scene)
+    scene.cycles.device = "CPU"
     scene.cycles.use_denoising = False
     scene.view_settings.view_transform = "Filmic"
     scene.view_settings.look = "Medium High Contrast"

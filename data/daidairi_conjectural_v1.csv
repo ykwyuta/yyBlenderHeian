@@ -16,6 +16,7 @@ CONJ_BURAKU_STORE_N2,豊楽院北倉庫2,warehouse,-280,565,26,10,D,同上,yes
 CONJ_BURAKU_STORE_N3,豊楽院北倉庫3,warehouse,-220,565,26,10,D,同上,yes
 CONJ_BURAKU_SOUTH,豊楽院南殿（楽所・控所）,hall,-280,300,26,14,D,舞楽の控所を南側に推定,yes
 CONJ_DAIRI_ANPUKU,安福殿,hall,222,720,22,12,D,文献にあり内裏南庭に面する5棟の一つ。2026年の発掘で内裏南西の位置が判明したが建物中心は未確定のため推定配置,yes
+CONJ_CHD_SHOANDEN,小安殿（大極殿後殿）,hall,0,615,30,13,C,大極殿の後殿（小安殿）の存在は史料に明記される。位置と規模は大極殿の北に置く模式配置,yes
 CONJ_DAIRI_KORYO,後涼殿,hall,238,800,24,13,D,文献にあり清涼殿の背後（北）とされる。位置は推定,yes
 CONJ_DAIRI_KURANDO,蔵人所,hall,272,790,18,11,D,蔵人所は清涼殿・紫宸殿への近接が必要な官房。位置は推定,yes
 CONJ_DAIRI_SHUNKO,春興殿,hall,330,800,20,12,D,文献に登場する殿舎。位置は推定,yes
