@@ -78,6 +78,7 @@ v18は外観精密化の続きその3（2026-11-21、部品v6）。内裏・後�
 | `09_conjectural-layer.md` | 推定レイヤー（確度D）の方針と内容。データ分離の仕組み |
 | `10_city-layer.md` | 市街レイヤー（平安京全域・模式生成）の方針と内容 |
 | `11_interior.md` | 内裏の内部（追加工程）の根拠と構成 |
+| `docs/proposal/01_non-building-enrichment.md` | 提案：建築物以外の要素（遠景の山・大気・河川・植生・生活の気配・儀式・季節・人物）によるリッチ化 |
 | `data/daidairi_facilities.csv` | 施設マスタ（機械可読） |
 | `data/daidairi_layout_v0.csv` | 配置座標v0（38件、模式図レベル）。ブロックアウト生成の入力 |
 | `scripts/build_daidairi_blockout.py` | 配置CSVからブロックアウトを生成し .blend と真上確認画像を出すスクリプト |
