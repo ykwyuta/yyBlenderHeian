@@ -22,7 +22,7 @@ def setup_cam(scene, loc, target, lens):
     direction = Vector(target) - cam.location
     cam.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
     cam.data.clip_start = 0.5
-    cam.data.clip_end = 5000.0
+    cam.data.clip_end = 60000.0  # 遠景の山（環境レイヤー）まで描く
     cam.data.lens = lens
     scene.camera = cam
     return cam

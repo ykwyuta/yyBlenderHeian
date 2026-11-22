@@ -43,7 +43,7 @@ bpy.context.collection.objects.link(tgt)
 cam_data = bpy.data.cameras.new("AxisCam")
 cam_data.lens = 30
 cam_data.clip_start = 0.5
-cam_data.clip_end = 5000.0
+cam_data.clip_end = 60000.0  # 遠景の山（環境レイヤー）まで描く
 cam = bpy.data.objects.new("AxisCam", cam_data)
 bpy.context.collection.objects.link(cam)
 con = cam.constraints.new(type="TRACK_TO")

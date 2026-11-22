@@ -30,13 +30,22 @@ heian_daidairi_detail_v17.blend として保存し、確認画像を描く。
 facility_id を引き継ぐ。
 """
 import bpy
+import os
+import sys as _sys
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO = os.path.dirname(_SCRIPT_DIR)
+_sys.path.insert(0, _SCRIPT_DIR)
+from heian_gpu import use_gpu  # noqa: E402  GPU があれば使う（HEIAN_DEVICE=CPU で無効）
+# 生成物（.blend・画像）の置き場所。環境変数 HEIAN_WORK で変更できる（既定: <リポジトリ>/output）
+WORK = os.environ.get("HEIAN_WORK", os.path.join(_REPO, "output"))
+os.makedirs(WORK, exist_ok=True)
 import importlib.util
 from mathutils import Vector
 from collections import defaultdict
 
 spec = importlib.util.spec_from_file_location(
     "build_detail",
-    "/home/hatch/docs/proposal/history/3d/heiankyo-blender/scripts/build_chodoin_detailed.py")
+    os.path.join(_SCRIPT_DIR, "build_chodoin_detailed.py"))
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
@@ -358,13 +367,13 @@ for o in list(bpy.data.objects):
 print("STUD_DONE studs=%d" % n_stud, flush=True)
 
 bpy.ops.wm.save_as_mainfile(
-    filepath="/home/hatch/workspace/heiankyo-blender/heian_daidairi_detail_v17.blend")
+    filepath=os.path.join(WORK, "heian_daidairi_detail_v17.blend"))
 print("SAVED_V17", flush=True)
 
 # ---------------------------------------------------------------- 確認描画
 scene = bpy.context.scene
 scene.render.engine = "CYCLES"
-scene.cycles.device = "CPU"
+use_gpu(scene)
 cam_data = bpy.data.cameras.new("V17Cam")
 cam_data.clip_end = 9000
 cam = bpy.data.objects.new("V17Cam", cam_data)
@@ -384,7 +393,7 @@ def render(path, w, h, samples):
     scene.render.filepath = path
     bpy.ops.render.render(write_still=True)
 
-OUT = "/home/hatch/workspace/heiankyo-blender/output/view_v17"
+OUT = os.path.join(WORK, "view_v17")
 setup_cam((95, 415, 26), (0, 568, 15), lens=35)
 render(OUT + "_daigokuden.png", 1280, 720, 48)
 print("DAIGOKUDEN_DONE", flush=True)
