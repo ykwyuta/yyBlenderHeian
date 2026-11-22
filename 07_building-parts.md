@@ -353,3 +353,21 @@ v21→v22）。利用者の提案 `docs/proposal/01_non-building-enrichment.md`
   瓦（MAT_RoofTile）に変えた。寄棟の殿舎の分すべて
 - 確認画像は `view_v24_shibi/oni/top.png`（shibi は大極殿の切妻棟端。
   大極殿の屋根は生成時からの仕様で緑釉瓦）
+
+## 18. 垂木の全展開（部品v11、モデルv25）
+
+2026-11-23、v24への足し算方式で実施した（`scripts/build_refine_v25.py`、
+v24→v25）。垂木はこれまで大極殿と入母屋5棟（部品v4）と回廊
+（部品v5）にだけ付いていたため、残りの大内裏の屋根にも広げた。
+利用者の提案 `docs/proposal/01_non-building-enrichment.md` の
+E1〜E10 には手をつけていない（E1〜E3とE5・E6は利用者自身が
+PR #2で実装済み）。
+
+- 対象は大内裏側の屋根205件（殿舎・官衙の庁舎・門の上下の屋根・
+  入母屋の切妻屋根）で、長辺7m以上のもの。垂木10,036本
+- 方式は部品v4と同じ：長辺の軒下に約0.92m間隔で、勾配に沿う
+  傾きを付けて並べる
+- 市街レイヤー（COL_70_City）の屋根には付けない。推定レイヤーの
+  建物の分には evidence=conjectural を付けた。新規分は専用
+  コレクション `COL_12_ExteriorRefine8`
+- 確認画像は `view_v25_suzaku/eave/top.png`
