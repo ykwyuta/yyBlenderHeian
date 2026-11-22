@@ -69,6 +69,15 @@ v6での作り込み（2026-11-20）：
 高速プリミティブで作る。
 """
 import bpy
+import os
+import sys as _sys
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO = os.path.dirname(_SCRIPT_DIR)
+_sys.path.insert(0, _SCRIPT_DIR)
+from heian_gpu import use_gpu  # noqa: E402  GPU があれば使う（HEIAN_DEVICE=CPU で無効）
+# 生成物（.blend・画像）の置き場所。環境変数 HEIAN_WORK で変更できる（既定: <リポジトリ>/output）
+WORK = os.environ.get("HEIAN_WORK", os.path.join(_REPO, "output"))
+os.makedirs(WORK, exist_ok=True)
 import importlib.util
 import math
 import random
@@ -77,7 +86,7 @@ from mathutils import Vector
 
 spec = importlib.util.spec_from_file_location(
     "build_detail",
-    "/home/hatch/docs/proposal/history/3d/heiankyo-blender/scripts/build_chodoin_detailed.py")
+    os.path.join(_SCRIPT_DIR, "build_chodoin_detailed.py"))
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
@@ -714,7 +723,7 @@ for obj in col.objects:
 print("CITY_DONE plots=%d kinds=%s objects=%d" % (len(plots), count, len(col.objects)), flush=True)
 
 bpy.ops.wm.save_as_mainfile(
-    filepath="/home/hatch/workspace/heiankyo-blender/heian_daidairi_detail_v15.blend")
+    filepath=os.path.join(WORK, "heian_daidairi_detail_v15.blend"))
 print("SAVED_V15", flush=True)
 
 scene = bpy.context.scene
@@ -740,7 +749,7 @@ def render(path, rx, ry, samples):
     scene.render.filepath = path
     bpy.ops.render.render(write_still=True)
 
-OUT = "/home/hatch/workspace/heiankyo-blender/output/view_v15"
+OUT = os.path.join(WORK, "view_v15")
 setup_cam((0, -1225, 3200), (0, -1225, 0), ortho=5600)
 render(OUT + "_top.png", 1250, 1500, 16)
 print("TOP_DONE", flush=True)

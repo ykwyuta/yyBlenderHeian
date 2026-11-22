@@ -22,13 +22,22 @@ v11（build_interior.py）で記録の残る4棟に作った内部の続き。
 とは対象が重ならない、建物側の作り込みとして実施する。
 """
 import bpy
+import os
+import sys as _sys
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO = os.path.dirname(_SCRIPT_DIR)
+_sys.path.insert(0, _SCRIPT_DIR)
+from heian_gpu import use_gpu  # noqa: E402  GPU があれば使う（HEIAN_DEVICE=CPU で無効）
+# 生成物（.blend・画像）の置き場所。環境変数 HEIAN_WORK で変更できる（既定: <リポジトリ>/output）
+WORK = os.environ.get("HEIAN_WORK", os.path.join(_REPO, "output"))
+os.makedirs(WORK, exist_ok=True)
 import importlib.util
 import math
 from mathutils import Vector
 
 spec = importlib.util.spec_from_file_location(
     "build_detail",
-    "/home/hatch/docs/proposal/history/3d/heiankyo-blender/scripts/build_chodoin_detailed.py")
+    os.path.join(_SCRIPT_DIR, "build_chodoin_detailed.py"))
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
@@ -236,13 +245,13 @@ for i, (token, tag) in enumerate(HALLS):
 print("INTERIOR2_DONE added=%d" % (len(col.objects) - BEFORE), flush=True)
 
 bpy.ops.wm.save_as_mainfile(
-    filepath="/home/hatch/workspace/heiankyo-blender/heian_daidairi_detail_v19.blend")
+    filepath=os.path.join(WORK, "heian_daidairi_detail_v19.blend"))
 print("SAVED_V19", flush=True)
 
 # ---------------------------------------------------------------- 確認画像
 scene = bpy.context.scene
 scene.render.engine = "CYCLES"
-scene.cycles.device = "CPU"
+use_gpu(scene)
 
 def hide_roof(token):
     for ob in bpy.data.objects:
@@ -270,7 +279,7 @@ def render(path, rx, ry, samples):
     scene.render.filepath = path
     bpy.ops.render.render(write_still=True)
 
-OUT = "/home/hatch/workspace/heiankyo-blender/output/view_v19"
+OUT = os.path.join(WORK, "view_v19")
 fr = hall_frame("DAIRI_KOKIDEN")
 hide_roof("DAIRI_KOKIDEN")
 setup_cam((fr["cx"], fr["cy"], fr["fz"] + 48), (fr["cx"], fr["cy"], fr["fz"]), ortho=30)

@@ -54,6 +54,15 @@ import hashlib
 import sys
 
 import bpy
+import os
+import sys as _sys
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO = os.path.dirname(_SCRIPT_DIR)
+_sys.path.insert(0, _SCRIPT_DIR)
+from heian_gpu import use_gpu  # noqa: E402  GPU があれば使う（HEIAN_DEVICE=CPU で無効）
+# 生成物（.blend・画像）の置き場所。環境変数 HEIAN_WORK で変更できる（既定: <リポジトリ>/output）
+WORK = os.environ.get("HEIAN_WORK", os.path.join(_REPO, "output"))
+os.makedirs(WORK, exist_ok=True)
 from mathutils import Vector
 
 # ---------------------------------------------------------------- materials
@@ -787,6 +796,8 @@ def main():
     argv = sys.argv
     args = argv[argv.index("--") + 1:]
     csv_path, blend_out, prefix = args[0], args[1], args[2]
+    # Blender は相対パスを独自の基準で解決するので、絶対パスに直す
+    blend_out, prefix = os.path.abspath(blend_out), os.path.abspath(prefix)
     conj_path = args[3] if len(args) > 3 else None
 
     bpy.ops.object.select_all(action="SELECT")
@@ -894,7 +905,7 @@ def main():
 
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    use_gpu(scene)
     scene.cycles.use_denoising = False
     scene.view_settings.view_transform = "Filmic"
     scene.view_settings.look = "Medium High Contrast"
