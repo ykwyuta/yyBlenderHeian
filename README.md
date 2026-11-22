@@ -66,8 +66,19 @@ v19は内裏内部の拡張（2026-11-22）。後宮の殿舎11棟に模式の�
 `11_interior.md` の「後宮への拡張」。
 v20は外観精密化の続きその4（2026-11-22、部品v7）。主要殿舎21棟の
 柱に組物と礎石、門26門に扁額を追加した。内容は
-`07_building-parts.md` §13。最新モデルは
-`heian_daidairi_detail_v20.blend`。
+`07_building-parts.md` §13。
+v21は環境レイヤー（2026-11-22、提案の第1弾 E1〜E3）。国土地理院の
+標高タイルから取った遠景の山並み（東山・北山・西山）、霞と雲と時刻の
+プリセット（昼・朝・夕）、鴨川・桂川・巨椋池・堀川・西堀川・右京の湿地を、
+専用コレクション `COL_91_Environment` に追加した。内容は
+`12_environment-layer.md`。
+v22は植生と生活の気配（2026-11-22、提案の第2弾）。樹を枝分かれと1枚ずつの葉からなる
+手続き生成に作り直し（`scripts/heian_trees.py`）、朱雀大路の柳、紫宸殿南庭の
+左近の梅・右近の橘、市街の松・落葉広葉樹・生垣を置いた。ほかに京の外の田畑の塗り分け、炊煙・干し物・筏と小舟・大路の轍と
+水たまり、夜の灯り（家の窓・石灯籠・門の篝火）と夜の時刻プリセットを追加した。
+内容は `13_life-layer.md`。全版は `scripts/build_all.ps1` で配置CSVから
+一括で再生成できる。
+最新モデルは `heian_daidairi_detail_v22.blend`。
 
 ## 読む順番
 
@@ -84,9 +95,16 @@ v20は外観精密化の続きその4（2026-11-22、部品v7）。主要殿舎2
 | `09_conjectural-layer.md` | 推定レイヤー（確度D）の方針と内容。データ分離の仕組み |
 | `10_city-layer.md` | 市街レイヤー（平安京全域・模式生成）の方針と内容 |
 | `11_interior.md` | 内裏の内部（追加工程）の根拠と構成 |
+| `12_environment-layer.md` | 環境レイヤー（遠景の山・大気と光・河川と水路）の根拠と構成 |
+| `13_life-layer.md` | 植生と生活の気配（柳・梅・橘、炊煙・灯り・轍など）の根拠と構成 |
 | `docs/proposal/01_non-building-enrichment.md` | 提案：建築物以外の要素（遠景の山・大気・河川・植生・生活の気配・儀式・季節・人物）によるリッチ化 |
 | `data/daidairi_facilities.csv` | 施設マスタ（機械可読） |
 | `data/daidairi_layout_v0.csv` | 配置座標v0（38件、模式図レベル）。ブロックアウト生成の入力 |
+| `scripts/build_all.ps1` | 配置CSVから最新版（v22）まで一括生成する。`-From <段階>` で途中から再開 |
+| `scripts/heian_trees.py` | 樹の手続き生成（柳・梅・橘・松・落葉広葉樹・生垣の原型とインスタンス配置） |
+| `scripts/heian_time.py` | 時刻のプリセット（昼・朝・夕・夜）を開いたモデルに適用する共通モジュール |
+| `scripts/fetch_dem.py` | 遠景の山に使う国土地理院の標高タイルを `output/dem/` に取得する |
+| `data/heiankyo_environment_v1.csv` | 河川・池・運河・湿地の配置（確度と根拠つき） |
 | `scripts/build_daidairi_blockout.py` | 配置CSVからブロックアウトを生成し .blend と真上確認画像を出すスクリプト |
 | `docs/tutorial/index.html` | チュートリアル（環境構築、スクリプト実行、GUIでの静止画・動画づくり、カスタマイズ）。Windows 11＋Blender 5.0 で確認 |
 
